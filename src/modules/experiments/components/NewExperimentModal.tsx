@@ -41,6 +41,8 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   const [researchGoal, setResearchGoal] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [tagsInput, setTagsInput] = useState<string>('');
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Load models whenever target project changes
   useEffect(() => {
@@ -92,6 +94,48 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
 
   const selectedModel = projectModels.find((m) => m.id === selectedModelId);
   const selectedProject = projects.find((p) => p.id === projectId);
+
+  // Upload a model file straight from the user's computer, create it on the
+  // active project, then select it — no need to leave this dialog.
+  const handleUploadModelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !projectId) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const content = await file.text().catch(() => '');
+      let meta: { simulator: string; physicsModule: string; fileType: string } = {
+        simulator: selectedProject?.simulator || 'Synopsys Sentaurus TCAD',
+        physicsModule: 'Hydrodynamic',
+        fileType: '',
+      };
+      try {
+        meta = { ...meta, ...(await apiClient.detectModelMeta(file.name)) };
+      } catch {
+        // fall back to project defaults if auto-detect is unavailable
+      }
+      const created = await apiClient.createProjectModel(projectId, {
+        fileName: file.name,
+        content,
+        simulator: meta.simulator,
+        physicsModule: meta.physicsModule,
+        fileType: meta.fileType,
+        description: `Uploaded from ${file.name}`,
+      });
+      const models = await apiClient.getProjectModels(projectId);
+      setProjectModels(models);
+      setSelectedModelId(created.id);
+      setTitle(`Sweep: ${created.fileName}`);
+      setResearchGoal(created.description || '');
+      setTagsInput(`${created.simulator}, ${created.physicsModule}`);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload model file.');
+    } finally {
+      setUploading(false);
+      // Allow re-picking the same file name later.
+      e.target.value = '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,9 +215,9 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-lg text-amber-300 flex items-start space-x-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-xs">No Scientific Model Files Uploaded in Active Project</p>
+                  <p className="font-semibold text-xs">No Scientific Model Files in This Project Yet</p>
                   <p className="text-[11px] text-amber-300/80">
-                    A project cannot execute unless a valid model file exists. Please go to Project Management and upload/import a model file (.mph, .cmd, .in, .py) first.
+                    Upload a model file (.mph, .cmd, .in, .py, .fsp) from your computer using the button below to run an experiment.
                   </p>
                 </div>
               </div>
@@ -189,6 +233,37 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                   </option>
                 ))}
               </select>
+            )}
+
+            {/* Upload a model straight from the user's computer */}
+            <label
+              className={`mt-2 flex items-center justify-center gap-2 border border-dashed rounded-lg p-2.5 text-xs cursor-pointer transition ${
+                uploading
+                  ? 'border-slate-700 text-slate-500'
+                  : 'border-cyan-700/70 text-cyan-300 hover:bg-cyan-950/40'
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Uploading model…</span>
+                </>
+              ) : (
+                <>
+                  <FileCode className="w-3.5 h-3.5" />
+                  <span>Upload model file from your computer</span>
+                </>
+              )}
+              <input
+                type="file"
+                onChange={handleUploadModelFile}
+                disabled={uploading}
+                className="hidden"
+                accept=".cmd,.mph,.py,.in,.fsp,.m,.foam,.txt,.dat,.tcl,.grd,.par"
+              />
+            </label>
+            {uploadError && (
+              <p className="mt-1 text-[11px] text-red-400">{uploadError}</p>
             )}
           </div>
 
