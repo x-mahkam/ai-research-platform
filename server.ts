@@ -13,7 +13,14 @@ async function startServer() {
     // (Vite is a devDependency and is absent from a production install).
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        watch: {
+          // Runtime data lives inside the project dir; don't let writes to the
+          // database or per-run workspaces trigger a dev-server page reload.
+          ignored: ['**/storage/**', '**/workspaces/**'],
+        },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
