@@ -8,11 +8,24 @@ export interface JobActionDTO {
   action: 'pause' | 'resume' | 'cancel' | 'retry';
 }
 
+// IDs are used to build filesystem paths (workspace directories), so they must
+// never contain path separators or traversal sequences.
+const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
+
+export function assertSafeId(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || !SAFE_ID_PATTERN.test(value)) {
+    throw new ValidationError(
+      `${fieldName} must be a string of letters, digits, "-" or "_" (max 128 chars).`
+    );
+  }
+  return value;
+}
+
 export function validateRunSimulationDTO(data: any): RunSimulationDTO {
   if (!data || !data.experimentId) {
     throw new ValidationError('experimentId is required to execute a simulation.');
   }
-  return { experimentId: data.experimentId };
+  return { experimentId: assertSafeId(data.experimentId, 'experimentId') };
 }
 
 export function validateJobActionDTO(data: any): JobActionDTO {

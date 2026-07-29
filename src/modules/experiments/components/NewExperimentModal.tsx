@@ -32,8 +32,6 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   activeProjectId,
   onCreateExperiment,
 }) => {
-  if (!isOpen) return null;
-
   const [projectId, setProjectId] = useState<string>(activeProjectId || projects[0]?.id || '');
   const [projectModels, setProjectModels] = useState<ModelFile[]>([]);
   const [loadingModels, setLoadingModels] = useState<boolean>(false);
@@ -46,7 +44,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
 
   // Load models whenever target project changes
   useEffect(() => {
-    if (!projectId) return;
+    if (!isOpen || !projectId) return;
     setLoadingModels(true);
     const targetProject = projects.find((p) => p.id === projectId);
 
@@ -77,7 +75,9 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
       .finally(() => {
         setLoadingModels(false);
       });
-  }, [projectId, projects]);
+  }, [isOpen, projectId, projects]);
+
+  if (!isOpen) return null;
 
   // Handle selecting a different model file
   const handleModelSelect = (modelId: string) => {

@@ -93,26 +93,41 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
     setStep('analysis');
 
     setTimeout(() => {
-      // Determine best simulator from text keywords
+      // Determine best simulator from text keywords. Plugin ids differ between
+      // the bundled defaults and the backend registry, so match on id/name keywords.
+      const findPlugin = (keyword: string) =>
+        plugins.find(
+          (p) =>
+            p.id.toLowerCase().includes(keyword) ||
+            p.name.toLowerCase().includes(keyword) ||
+            (p.simulatorName || '').toLowerCase().includes(keyword)
+        );
+
       const lower = text.toLowerCase();
-      let matchedPlugin = plugins.find((p) => p.id === 'sentaurus_tcad') || plugins[0];
+      let matchedPlugin = findPlugin('sentaurus') || plugins[0];
 
       if (lower.includes('comsol') || lower.includes('thermal') || lower.includes('heat') || lower.includes('mechanic')) {
-        matchedPlugin = plugins.find((p) => p.id === 'comsol_mph') || matchedPlugin;
+        matchedPlugin = findPlugin('comsol') || matchedPlugin;
       } else if (lower.includes('quantumatk') || lower.includes('dft') || lower.includes('bandgap') || lower.includes('atomic') || lower.includes('2d')) {
-        matchedPlugin = plugins.find((p) => p.id === 'quantumatk_py') || matchedPlugin;
+        matchedPlugin = findPlugin('quantum') || matchedPlugin;
       } else if (lower.includes('lumerical') || lower.includes('photonic') || lower.includes('optic') || lower.includes('waveguide')) {
-        matchedPlugin = plugins.find((p) => p.id === 'lumerical_fsp') || matchedPlugin;
+        matchedPlugin = findPlugin('lumerical') || matchedPlugin;
       } else if (lower.includes('openfoam') || lower.includes('cfd') || lower.includes('fluid') || lower.includes('turbulent')) {
-        matchedPlugin = plugins.find((p) => p.id === 'openfoam_foam') || matchedPlugin;
+        matchedPlugin = findPlugin('openfoam') || matchedPlugin;
       } else if (lower.includes('silvaco') || lower.includes('atlas')) {
-        matchedPlugin = plugins.find((p) => p.id === 'silvaco_atlas') || matchedPlugin;
+        matchedPlugin = findPlugin('silvaco') || matchedPlugin;
       } else if (lower.includes('matlab') || lower.includes('simulink')) {
-        matchedPlugin = plugins.find((p) => p.id === 'matlab_m') || matchedPlugin;
+        matchedPlugin = findPlugin('matlab') || matchedPlugin;
+      }
+
+      if (!matchedPlugin) {
+        setIsAnalyzing(false);
+        setStep('prompt');
+        return;
       }
 
       setAnalyzedData({
-        detectedDomain: matchedPlugin?.category || 'Scientific Simulation',
+        detectedDomain: matchedPlugin.scientificFields?.[0] || 'Scientific Simulation',
         recommendedSimulator: matchedPlugin,
         extractedMetrics: ['Subthreshold Swing (SS)', 'Threshold Voltage (Vt)', 'Thermal Dissipation', 'Target Convergence Score'],
         suggestedParameters: {
@@ -148,16 +163,8 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
     let finalContent = uploadedFileContent;
 
     if (!hasExistingModel || !uploadedFileName) {
-      const extMap: Record<string, string> = {
-        sentaurus_tcad: 'cmd',
-        comsol_mph: 'mph',
-        quantumatk_py: 'py',
-        lumerical_fsp: 'fsp',
-        silvaco_atlas: 'in',
-        matlab_m: 'm',
-        openfoam_foam: 'foam',
-      };
-      const ext = extMap[analyzedData.recommendedSimulator.id] || 'cmd';
+      const firstFileType = analyzedData.recommendedSimulator.capabilities?.supportedFileTypes?.[0];
+      const ext = firstFileType ? firstFileType.replace(/^\./, '') : 'cmd';
       finalFileName = `AI_Generated_Model_${Date.now()}.${ext}`;
       finalContent = `# Auto-generated Scientific Model Template by AI Agent
 # Solver: ${analyzedData.recommendedSimulator.name}
@@ -314,7 +321,7 @@ File {
                       <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                       <div>
                         <div className="font-bold text-white">{exp.title}</div>
-                        <div className="text-[11px] text-slate-400">Simulator: {exp.simulatorId}</div>
+                        <div className="text-[11px] text-slate-400">Simulator: {exp.simulator}</div>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
@@ -376,12 +383,14 @@ File {
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-mono block uppercase">Physics Domain</span>
-                <span className="font-semibold text-slate-200">{analyzedData.recommendedSimulator.category}</span>
+                <span className="font-semibold text-slate-200">{analyzedData.detectedDomain}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 font-mono block uppercase">Model Format</span>
                 <span className="font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded text-[11px] inline-block mt-0.5">
-                  *.{analyzedData.recommendedSimulator.supportedExtensions.join(', *.')}
+                  {(analyzedData.recommendedSimulator.capabilities?.supportedFileTypes || ['.cmd'])
+                    .map((t) => `*${t}`)
+                    .join(', ')}
                 </span>
               </div>
             </div>

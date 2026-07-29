@@ -7,6 +7,7 @@ import {
   PluginHealthStatus,
 } from '../plugins/index.js';
 import { SimulatorPlugin } from '../shared/types.js';
+import { ValidationError } from '../shared/errors.js';
 
 import { SYSTEM_CONSTANTS } from '../configuration/index.js';
 
@@ -73,8 +74,26 @@ export class PluginService {
 
   public async configurePlugin(id: string, config: { executablePath?: string }): Promise<void> {
     if ((id === 'comsol-multiphysics' || id === 'comsol') && config.executablePath) {
+      const execPath = config.executablePath;
+      // The configured path is later handed to execFile, so restrict it to an
+      // existing absolute path whose binary name is actually a COMSOL launcher —
+      // otherwise this endpoint lets a caller pick an arbitrary program to run.
+      const allowedBinaries = ['comsolbatch', 'comsolbatch.exe', 'comsol', 'comsol.exe'];
+      const path = await import('path');
+      const fs = await import('fs');
+      if (
+        typeof execPath !== 'string' ||
+        !path.isAbsolute(execPath) ||
+        !allowedBinaries.includes(path.basename(execPath).toLowerCase()) ||
+        !fs.existsSync(execPath) ||
+        !fs.statSync(execPath).isFile()
+      ) {
+        throw new ValidationError(
+          'executablePath must be an absolute path to an existing COMSOL launcher binary (comsolbatch / comsol).'
+        );
+      }
       const { ComsolLocator } = await import('../comsol/index.js');
-      ComsolLocator.setManualPath(config.executablePath);
+      ComsolLocator.setManualPath(execPath);
     }
   }
 }

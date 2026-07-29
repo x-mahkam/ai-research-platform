@@ -54,19 +54,16 @@ export class ExperimentService {
     const workspacePath = `/workspaces/experiments/${expId}/${selectedModel.fileName}`;
 
     const newExp: Experiment = {
-      id: expId,
-      createdAt: getCurrentTimestamp(),
-      updatedAt: getCurrentTimestamp(),
-      status: 'Ready',
-      version: 1,
+      // Client-supplied fields first; server-owned fields below must win —
+      // otherwise a request body carrying e.g. an existing "id" silently
+      // overwrites that record.
+      ...expData,
       notes: [],
       attachments: [],
       tags: expData.tags || [selectedModel.simulator, selectedModel.physicsModule],
       title: expData.title || `Experiment: ${selectedModel.fileName}`,
       description: expData.description || `Execution run for ${selectedModel.fileName} (${selectedModel.simulator})`,
-      projectId,
       pluginId: expData.pluginId || 'plugin-auto',
-      modelId,
       modelFileName: selectedModel.fileName,
       simulator,
       physicsModule,
@@ -77,7 +74,13 @@ export class ExperimentService {
         { key: 'param_temp', name: 'Ambient Temperature', value: 300, unit: 'K', group: 'Thermal' },
       ],
       createdBy: expData.createdBy || 'Dr. Jasur Alimov',
-      ...expData,
+      id: expId,
+      projectId,
+      modelId,
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp(),
+      status: 'Ready',
+      version: 1,
     };
 
     const created = this.expRepo.create(newExp);

@@ -13,12 +13,18 @@ export class ResearchReporter {
     const expTitle = experiment?.title || 'Advanced Simulation Experiment';
     const projName = projectName || 'AI Research Platform';
 
-    const metrics = experiment?.results?.metrics || analysisReport?.figuresOfMerit || {
-      'Ion (ON Current)': '1.45 mA/µm',
-      'Ioff (OFF Current)': '1.12 nA/µm',
-      'Subthreshold Swing': '63.5 mV/dec',
-      'Threshold Voltage (Vth)': '0.285 V',
-    };
+    const metrics: Record<string, unknown> | null =
+      experiment?.results?.metrics || analysisReport?.figuresOfMerit || null;
+
+    const metricsSection = metrics
+      ? `| Parameter / Metric | Extracted Value | Unit / Target | Status |
+| :--- | :--- | :--- | :--- |
+${Object.entries(metrics)
+  .map(([k, v]) => `| **${k}** | \`${v}\` | Standard | Extracted from simulator output |`)
+  .join('\n')}`
+      : `> **No simulation results are available for this experiment yet.**
+> Figures of merit will appear here after a real simulator run completes and its output is parsed.
+> This platform never substitutes synthetic values for missing simulation data.`;
 
     const markdownContent = `# Comprehensive Scientific Research Report
 **Experiment:** ${expTitle}  
@@ -35,11 +41,7 @@ All simulation tasks were executed autonomously by the **Simulation Engine** usi
 ---
 
 ## 2. Key Figures of Merit
-| Parameter / Metric | Extracted Value | Unit / Target | Status |
-| :--- | :--- | :--- | :--- |
-${Object.entries(metrics)
-  .map(([k, v]) => `| **${k}** | \`${v}\` | Standard | Verified |`)
-  .join('\n')}
+${metricsSection}
 
 ---
 

@@ -12,22 +12,23 @@ export class OptimizationService {
 
   public createOptimization(data: Partial<OptimizationJob>): OptimizationJob {
     const newOpt: OptimizationJob = {
-      id: generateId('opt'),
+      // Client-supplied fields first; server-owned fields below must win.
+      ...data,
       experimentId: data.experimentId || 'exp-001',
       title: data.title || 'Parameter Sweep Optimization',
       algorithm: data.algorithm || 'Bayesian Optimization',
       targetMetric: data.targetMetric || 'Ion/Ioff Ratio',
       objective: data.objective || 'maximize',
-      status: 'Running',
-      currentIteration: 1,
       maxIterations: data.maxIterations || 50,
-      bestValue: null,
-      bestParameters: null,
-      history: [],
       parametersToOptimize: data.parametersToOptimize || [
         { key: 'lg_nm', min: 10, max: 20, current: 12 },
       ],
-      ...data,
+      id: generateId('opt'),
+      status: 'Running',
+      currentIteration: 1,
+      bestValue: null,
+      bestParameters: null,
+      history: [],
     };
 
     return this.repo.create(newOpt);
