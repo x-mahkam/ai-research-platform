@@ -16,9 +16,14 @@
         "Dr. Jasur Alimov"
       ],
       "createdAt": "2026-06-10T09:00:00Z",
-      "updatedAt": "2026-07-28T16:49:44.867Z",
+      "updatedAt": "2026-07-29T00:00:00Z",
       "favorite": true,
-      "experimentCount": 0
+      "experimentCount": 0,
+      "simulator": "Synopsys Sentaurus TCAD",
+      "physicsModule": "Hydrodynamic",
+      "scientificField": "Semiconductor TCAD",
+      "researchGoal": "Comprehensive TCAD modeling of multi-channel Silicon Nanosheet FETs.",
+      "defaultModelId": "mod-seed-001"
     }
   },
   "experiments": {},
@@ -209,5 +214,25 @@
       "updatedAt": "2026-07-28T16:49:44.872Z"
     }
   },
-  "scheduler_queue": {}
+  "scheduler_queue": {},
+  "models": {
+    "mod-seed-001": {
+      "id": "mod-seed-001",
+      "projectId": "proj-001",
+      "fileName": "nanosheet_transport.cmd",
+      "fileType": ".cmd",
+      "simulator": "Synopsys Sentaurus TCAD",
+      "physicsModule": "Hydrodynamic",
+      "absolutePath": "/workspaces/projects/proj-001/models/nanosheet_transport.cmd",
+      "fileSize": 317,
+      "checksum": "sha256-seed-nanosheet",
+      "version": "1.0",
+      "owner": "Dr. Jasur Alimov",
+      "createdAt": "2026-07-29T00:00:00Z",
+      "updatedAt": "2026-07-29T00:00:00Z",
+      "content": "# Sentaurus Device starter deck seeded by AI Research Platform\n# Replace with your real TCAD setup, or run as-is to exercise the pipeline.\nDevice \"Nanosheet_FET\" {\n  Grid    = \"nanosheet.grd\"\n  Physics = Hydrodynamic\n  Plot    ( Potential eDensity hDensity eCurrent )\n}\n\nSolve {\n  Coupled { Poisson Electron Hole }\n}\n",
+      "description": "Seeded starter Sentaurus TCAD model so the default project is runnable out of the box.",
+      "isDefault": true
+    }
+  }
 }
