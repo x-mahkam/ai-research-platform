@@ -1,3 +1,4 @@
+import path from 'path';
 import { persistentDbEngine, PersistentDatabaseEngine } from '../database/engine.js';
 import { transactionManager, TransactionManager } from '../transactions/index.js';
 import { migrationManager, MigrationManager } from '../migrations/index.js';
@@ -43,6 +44,10 @@ export class DIContainer {
   }
 
   public async initialize(): Promise<void> {
+    // Connect to the store and load data into memory before anything reads it.
+    // Seeds from the committed JSON baseline on a fresh (empty) database.
+    await this.dbEngine.init({ seedJsonPath: path.join(process.cwd(), 'storage', 'database.json') });
+
     // Run schema migrations on container initialization
     await this.migrationManager.runPendingMigrations();
   }

@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 workspaces/
+
+# SQLite runtime database (seed lives in storage/database.json)
+storage/arp.db*
