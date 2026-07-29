@@ -252,7 +252,7 @@ import QuantumAnalysis as QA
 
 # Define Atomic Device Configuration
 bulk_lattice = QA.UnitCell([[0, 2.7, 2.7], [2.7, 0, 2.7], [2.7, 2.7, 0]])
-calculator = QA.LCAOCalculator(exchange_correlation=QA.LDA.P组织)
+calculator = QA.LCAOCalculator(exchange_correlation=QA.LDA.PZ)
 device_configuration = QA.DeviceConfiguration(bulk_lattice, calculator)
 
 # Calculate Transmission Spectrum
@@ -290,11 +290,20 @@ QA.nlprint(transmission_spectrum)
     return new Promise((resolve) => {
       execFile(this.atkPythonPath!, [scriptPath], { cwd: workspacePath }, (error, stdout, stderr) => {
         this.isRunning = false;
-        this.lastResults = {
-          metrics: { 'Status': 'Executed real QuantumATK script' },
-          rawLogs: stdout,
-          curves: [],
-        };
+        if (error) {
+          this.lastResults = {
+            status: 'EXECUTION_FAILED',
+            metrics: { 'Status': `QuantumATK execution failed: ${error.message}` },
+            rawLogs: `${stdout}\n${stderr}`,
+            curves: [],
+          };
+        } else {
+          this.lastResults = {
+            metrics: { 'Status': 'Executed real QuantumATK script' },
+            rawLogs: stderr ? `${stdout}\n[stderr]\n${stderr}` : stdout,
+            curves: [],
+          };
+        }
         resolve(this.lastResults);
       });
     });

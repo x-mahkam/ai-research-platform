@@ -1,5 +1,9 @@
+import { randomBytes } from 'crypto';
+
 export function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}`;
+  // Date.now() alone collides when two entities are created in the same
+  // millisecond; the random suffix makes IDs collision-safe.
+  return `${prefix}-${Date.now()}-${randomBytes(4).toString('hex')}`;
 }
 
 export function getCurrentTimestamp(): string {

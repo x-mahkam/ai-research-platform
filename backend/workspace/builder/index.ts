@@ -21,7 +21,13 @@ export class WorkspaceBuilder {
     const pluginId = options.pluginId || 'sentaurus-tcad';
     const simulator = options.simulator || 'Synopsys Sentaurus';
 
-    const rootPath = path.join(this.baseWorkspacesDir, `experiment-${experimentId}`, `run-${runId}`);
+    const rootPath = path.resolve(this.baseWorkspacesDir, `experiment-${experimentId}`, `run-${runId}`);
+    const resolvedBase = path.resolve(this.baseWorkspacesDir);
+    if (!rootPath.startsWith(resolvedBase + path.sep)) {
+      throw new Error(
+        `Refusing to build workspace outside of the workspaces directory (experimentId="${experimentId}", runId="${runId}").`
+      );
+    }
     const inputPath = path.join(rootPath, 'input');
     const outputPath = path.join(rootPath, 'output');
     const logsPath = path.join(rootPath, 'logs');

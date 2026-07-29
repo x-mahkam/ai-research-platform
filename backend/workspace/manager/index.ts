@@ -15,6 +15,22 @@ import { NotFoundError, ValidationError } from '../../shared/errors.js';
 
 const logger = new LoggerService('WorkspaceManager');
 
+// Path segments (ids, file names) must never escape the workspace directory.
+function assertSafeSegment(value: string, fieldName: string): string {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value.includes('/') ||
+    value.includes('\\') ||
+    value.includes('\0') ||
+    value === '.' ||
+    value.includes('..')
+  ) {
+    throw new ValidationError(`${fieldName} contains characters that are not allowed in a path segment.`);
+  }
+  return value;
+}
+
 export class WorkspaceManager {
   private activeWorkspaces: Map<string, IWorkspaceManifest> = new Map();
   private baseWorkspacesDir: string;
@@ -28,6 +44,8 @@ export class WorkspaceManager {
   }
 
   private getWorkspaceDir(experimentId: string, runId: string): string {
+    assertSafeSegment(experimentId, 'experimentId');
+    assertSafeSegment(runId, 'runId');
     const structuredPath = path.join(this.baseWorkspacesDir, `experiment-${experimentId}`, `run-${runId}`);
     if (fs.existsSync(structuredPath)) return structuredPath;
 
@@ -191,6 +209,7 @@ export class WorkspaceManager {
   }
 
   public writeInputFile(experimentId: string, runId: string, fileName: string, content: string | Buffer): string {
+    assertSafeSegment(fileName, 'fileName');
     const manifest = this.getWorkspace(experimentId, runId);
     const targetPath = path.join(manifest.paths.input, fileName);
     fs.writeFileSync(targetPath, content);
@@ -205,6 +224,7 @@ export class WorkspaceManager {
   }
 
   public writeOutputFile(experimentId: string, runId: string, fileName: string, content: string | Buffer): string {
+    assertSafeSegment(fileName, 'fileName');
     const manifest = this.getWorkspace(experimentId, runId);
     const targetPath = path.join(manifest.paths.output, fileName);
     fs.writeFileSync(targetPath, content);
@@ -249,6 +269,7 @@ export class WorkspaceManager {
   }
 
   public writeReportFile(experimentId: string, runId: string, fileName: string, content: string | Buffer): string {
+    assertSafeSegment(fileName, 'fileName');
     const manifest = this.getWorkspace(experimentId, runId);
     const targetPath = path.join(manifest.paths.reports, fileName);
     fs.writeFileSync(targetPath, content);

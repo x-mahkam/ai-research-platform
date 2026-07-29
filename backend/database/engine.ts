@@ -108,6 +108,11 @@ export class PersistentDatabaseEngine {
   }
 
   public insert<T extends { id: string }>(collectionName: keyof IDatabaseSchema, item: T): T {
+    // Collections are plain objects keyed by id — special keys would mutate the
+    // object prototype instead of storing a record.
+    if (typeof item.id !== 'string' || item.id === '__proto__' || item.id === 'constructor' || item.id === 'prototype') {
+      throw new Error(`Invalid record id: "${item.id}"`);
+    }
     const col = this.getCollection<T>(collectionName);
     const now = new Date().toISOString();
     const enriched = {
