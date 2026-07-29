@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { createClient, type Client } from '@libsql/client';
 import { LoggerService } from '../logging/logger.js';
 
 const logger = new LoggerService('PersistentDatabaseEngine');
@@ -20,20 +21,40 @@ export interface IDatabaseSchema {
   migrations: Record<string, any>;
 }
 
+type DirtyOp = 'upsert' | 'delete';
+
+/**
+ * SQLite-backed data store (via libSQL). Records are kept in memory for fast,
+ * synchronous reads (the whole app reads collections synchronously); mutations
+ * are written through to SQLite as individual rows, coalesced on a short
+ * debounce. This survives restarts and — pointed at a libSQL/Turso URL via
+ * DATABASE_URL — survives ephemeral hosts (e.g. Render's free tier) where a
+ * local file would be wiped on each deploy.
+ *
+ * Storage schema is a single key/value table: kv(collection, id, data JSON).
+ */
 export class PersistentDatabaseEngine {
-  private dbFilePath: string;
   private data: IDatabaseSchema;
+  private client: Client | null = null;
+  private readonly url: string;
+  private readonly authToken?: string;
+  private initialized = false;
+
+  private dirty = new Map<string, DirtyOp>(); // "collection::id" -> op
   private isSaving = false;
-  private dirty = false;
-  private pendingAgain = false;
   private flushTimer: NodeJS.Timeout | null = null;
 
-  constructor(customPath?: string) {
-    // ARP_DB_PATH lets tests point the store at an isolated temp file.
-    this.dbFilePath =
-      customPath || process.env.ARP_DB_PATH || path.join(process.cwd(), 'storage', 'database.json');
+  constructor(customUrl?: string) {
+    // Resolution order: explicit arg -> DATABASE_URL (remote/Turso or file:) ->
+    // ARP_DB_PATH (a filesystem path, used by tests) -> local storage/arp.db.
+    const envUrl = process.env.DATABASE_URL;
+    const dbPath = process.env.ARP_DB_PATH;
+    this.url =
+      customUrl ||
+      envUrl ||
+      (dbPath ? `file:${path.resolve(dbPath)}` : `file:${path.join(process.cwd(), 'storage', 'arp.db')}`);
+    this.authToken = process.env.DATABASE_AUTH_TOKEN;
     this.data = this.createEmptySchema();
-    this.initializeStorage();
   }
 
   private createEmptySchema(): IDatabaseSchema {
@@ -54,88 +75,119 @@ export class PersistentDatabaseEngine {
     };
   }
 
-  private initializeStorage(): void {
-    try {
-      const dir = path.dirname(this.dbFilePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
+  /**
+   * Connects, ensures the schema exists, and loads all rows into memory.
+   * Must be awaited before the app serves requests. Idempotent.
+   */
+  public async init(opts?: { seedJsonPath?: string }): Promise<void> {
+    if (this.initialized) return;
 
-      if (fs.existsSync(this.dbFilePath)) {
-        const raw = fs.readFileSync(this.dbFilePath, 'utf-8');
-        const parsed = JSON.parse(raw);
+    // Ensure the parent directory exists for local file URLs.
+    if (this.url.startsWith('file:')) {
+      const filePath = this.url.slice('file:'.length);
+      const dir = path.dirname(filePath);
+      if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    }
+
+    this.client = createClient({ url: this.url, authToken: this.authToken });
+    await this.client.execute(
+      'CREATE TABLE IF NOT EXISTS kv (collection TEXT NOT NULL, id TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (collection, id))'
+    );
+
+    await this.loadAll();
+
+    // One-time seed: if the store is empty and a JSON seed file exists, import
+    // it so fresh installs / fresh remote databases start with baseline data.
+    if (this.isEmpty() && opts?.seedJsonPath && fs.existsSync(opts.seedJsonPath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(opts.seedJsonPath, 'utf-8'));
         this.data = { ...this.createEmptySchema(), ...parsed };
-        logger.info(`Loaded persistent database from file: ${this.dbFilePath}`);
-      } else {
-        this.saveToDiskSync();
-        logger.info(`Initialized fresh database storage file: ${this.dbFilePath}`);
+        for (const collection of Object.keys(this.data) as (keyof IDatabaseSchema)[]) {
+          for (const id of Object.keys(this.data[collection] || {})) {
+            this.dirty.set(`${String(collection)}::${id}`, 'upsert');
+          }
+        }
+        await this.flushPending();
+        logger.info(`Seeded database from ${opts.seedJsonPath}`);
+      } catch (err: any) {
+        logger.error(`Failed to seed from ${opts.seedJsonPath}: ${err.message}`);
       }
-    } catch (err: any) {
-      logger.error(`Failed to load database file (${err.message}). Initializing fallback in-memory schema.`);
-      this.data = this.createEmptySchema();
     }
+
+    this.initialized = true;
+    logger.info(`Database ready (${this.url.startsWith('file:') ? 'local file' : 'remote'} store).`);
   }
 
-  private saveToDiskSync(): void {
-    try {
-      const tempPath = `${this.dbFilePath}.tmp`;
-      fs.writeFileSync(tempPath, JSON.stringify(this.data, null, 2), 'utf-8');
-      fs.renameSync(tempPath, this.dbFilePath);
-    } catch (err: any) {
-      logger.error(`Failed to flush database to disk: ${err.message}`);
-    }
-  }
-
-  // Async, non-blocking persist. A full-database writeFileSync on every single
-  // mutation blocks the event loop — under a running simulation (status
-  // transitions + 2s telemetry log appends across multiple jobs) the storm of
-  // synchronous full-file rewrites froze the server. Writes are coalesced: a
-  // burst of mutations results in a single disk write, and any mutation that
-  // arrives mid-write triggers exactly one more write afterwards.
-  private async saveToDiskAsync(): Promise<void> {
-    if (this.isSaving) {
-      this.pendingAgain = true;
-      return;
-    }
-    this.isSaving = true;
-    this.dirty = false;
-    try {
-      const tempPath = `${this.dbFilePath}.tmp`;
-      await fs.promises.writeFile(tempPath, JSON.stringify(this.data, null, 2), 'utf-8');
-      await fs.promises.rename(tempPath, this.dbFilePath);
-    } catch (err: any) {
-      logger.error(`Failed to flush database to disk: ${err.message}`);
-      this.dirty = true;
-    } finally {
-      this.isSaving = false;
-      if (this.pendingAgain || this.dirty) {
-        this.pendingAgain = false;
-        void this.saveToDiskAsync();
+  private async loadAll(): Promise<void> {
+    if (!this.client) return;
+    this.data = this.createEmptySchema();
+    const res = await this.client.execute('SELECT collection, id, data FROM kv');
+    for (const row of res.rows) {
+      const collection = String(row.collection) as keyof IDatabaseSchema;
+      const id = String(row.id);
+      if (!this.data[collection]) (this.data as any)[collection] = {};
+      try {
+        this.data[collection][id] = JSON.parse(String(row.data));
+      } catch {
+        // skip corrupt row rather than fail the whole load
       }
     }
   }
 
-  public flush(): void {
-    // Debounce rapid mutations into a single asynchronous write.
-    this.dirty = true;
+  private isEmpty(): boolean {
+    return Object.values(this.data).every((col) => Object.keys(col).length === 0);
+  }
+
+  private markDirty(collection: keyof IDatabaseSchema, id: string, op: DirtyOp): void {
+    this.dirty.set(`${String(collection)}::${id}`, op);
+    this.scheduleFlush();
+  }
+
+  private scheduleFlush(): void {
     if (this.flushTimer) return;
     this.flushTimer = setTimeout(() => {
       this.flushTimer = null;
-      void this.saveToDiskAsync();
+      void this.flushPending();
     }, 50);
-    // A pending flush must not, by itself, keep the process alive — the
-    // beforeExit/SIGINT handlers flush synchronously on shutdown.
+    // A pending flush must not, by itself, keep the process alive.
     this.flushTimer.unref?.();
   }
 
-  // Synchronous flush for process shutdown, where the event loop is ending and
-  // pending async writes would not complete.
-  public flushSync(): void {
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = null;
+  /**
+   * Writes all pending row changes to SQLite in a single batch. Coalesces:
+   * mutations that arrive during a write are captured for the next batch.
+   */
+  public async flushPending(): Promise<void> {
+    if (!this.client || this.isSaving || this.dirty.size === 0) return;
+    this.isSaving = true;
+
+    const batch = [...this.dirty.entries()];
+    this.dirty.clear();
+
+    const statements = batch.map(([key, op]) => {
+      const sep = key.indexOf('::');
+      const collection = key.slice(0, sep);
+      const id = key.slice(sep + 2);
+      if (op === 'delete') {
+        return { sql: 'DELETE FROM kv WHERE collection = ? AND id = ?', args: [collection, id] };
+      }
+      const record = (this.data as any)[collection]?.[id];
+      return {
+        sql: 'INSERT OR REPLACE INTO kv (collection, id, data) VALUES (?, ?, ?)',
+        args: [collection, id, JSON.stringify(record ?? null)],
+      };
+    });
+
+    try {
+      await this.client.batch(statements, 'write');
+    } catch (err: any) {
+      logger.error(`Failed to persist database batch: ${err.message}`);
+      // Re-queue this batch so the changes are retried on the next flush.
+      for (const [key, op] of batch) if (!this.dirty.has(key)) this.dirty.set(key, op);
+    } finally {
+      this.isSaving = false;
+      if (this.dirty.size > 0) this.scheduleFlush();
     }
-    this.saveToDiskSync();
   }
 
   public getCollection<T = any>(collectionName: keyof IDatabaseSchema): Record<string, T> {
@@ -145,10 +197,7 @@ export class PersistentDatabaseEngine {
     return this.data[collectionName] as Record<string, T>;
   }
 
-  public find<T = any>(
-    collectionName: keyof IDatabaseSchema,
-    predicate?: (item: T) => boolean
-  ): T[] {
+  public find<T = any>(collectionName: keyof IDatabaseSchema, predicate?: (item: T) => boolean): T[] {
     const col = this.getCollection<T>(collectionName);
     const items = Object.values(col);
     if (!predicate) return items;
@@ -174,7 +223,7 @@ export class PersistentDatabaseEngine {
       updatedAt: now,
     };
     col[item.id] = enriched;
-    this.flush();
+    this.markDirty(collectionName, item.id, 'upsert');
     return enriched;
   }
 
@@ -193,7 +242,7 @@ export class PersistentDatabaseEngine {
       updatedAt: new Date().toISOString(),
     };
     col[id] = updated;
-    this.flush();
+    this.markDirty(collectionName, id, 'upsert');
     return updated;
   }
 
@@ -201,34 +250,42 @@ export class PersistentDatabaseEngine {
     const col = this.getCollection(collectionName);
     if (col[id]) {
       delete col[id];
-      this.flush();
+      this.markDirty(collectionName, id, 'delete');
       return true;
     }
     return false;
   }
 
   public clearCollection(collectionName: keyof IDatabaseSchema): void {
+    const col = this.getCollection(collectionName);
+    for (const id of Object.keys(col)) {
+      this.markDirty(collectionName, id, 'delete');
+    }
     this.data[collectionName] = {};
-    this.flush();
   }
 }
 
 export const persistentDbEngine = new PersistentDatabaseEngine();
 
-// Persist any pending in-memory changes synchronously before the process exits.
-const flushOnExit = () => {
+// Persist any pending in-memory changes before the process exits.
+let exiting = false;
+const flushOnExit = async () => {
+  if (exiting) return;
+  exiting = true;
   try {
-    persistentDbEngine.flushSync();
+    await persistentDbEngine.flushPending();
   } catch {
     // best-effort on shutdown
   }
 };
-process.once('SIGINT', () => {
-  flushOnExit();
+process.once('SIGINT', async () => {
+  await flushOnExit();
   process.exit(0);
 });
-process.once('SIGTERM', () => {
-  flushOnExit();
+process.once('SIGTERM', async () => {
+  await flushOnExit();
   process.exit(0);
 });
-process.once('beforeExit', flushOnExit);
+process.once('beforeExit', () => {
+  void flushOnExit();
+});
