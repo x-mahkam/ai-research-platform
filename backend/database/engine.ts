@@ -29,7 +29,9 @@ export class PersistentDatabaseEngine {
   private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(customPath?: string) {
-    this.dbFilePath = customPath || path.join(process.cwd(), 'storage', 'database.json');
+    // ARP_DB_PATH lets tests point the store at an isolated temp file.
+    this.dbFilePath =
+      customPath || process.env.ARP_DB_PATH || path.join(process.cwd(), 'storage', 'database.json');
     this.data = this.createEmptySchema();
     this.initializeStorage();
   }
@@ -121,6 +123,9 @@ export class PersistentDatabaseEngine {
       this.flushTimer = null;
       void this.saveToDiskAsync();
     }, 50);
+    // A pending flush must not, by itself, keep the process alive — the
+    // beforeExit/SIGINT handlers flush synchronously on shutdown.
+    this.flushTimer.unref?.();
   }
 
   // Synchronous flush for process shutdown, where the event loop is ending and
