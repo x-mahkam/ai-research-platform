@@ -1,0 +1,213 @@
+{
+  "projects": {
+    "proj-001": {
+      "id": "proj-001",
+      "title": "Semiconductor Device Quantum Transport",
+      "description": "Comprehensive TCAD modeling of multi-channel Silicon Nanosheet FETs.",
+      "owner": "Dr. Jasur Alimov",
+      "domain": "Semiconductor TCAD",
+      "tags": [
+        "Nanosheet",
+        "FinFET",
+        "Sentaurus"
+      ],
+      "status": "Active",
+      "members": [
+        "Dr. Jasur Alimov"
+      ],
+      "createdAt": "2026-06-10T09:00:00Z",
+      "updatedAt": "2026-07-28T16:49:44.867Z",
+      "favorite": true,
+      "experimentCount": 0
+    }
+  },
+  "experiments": {},
+  "simulations": {},
+  "jobs": {},
+  "plugins": {
+    "sentaurus-tcad": {
+      "id": "sentaurus-tcad",
+      "name": "Synopsys Sentaurus TCAD",
+      "vendor": "Synopsys Inc.",
+      "version": "2024.03",
+      "status": "Active",
+      "description": "Premier 2D/3D Semiconductor Device & Process Simulator for sub-5nm transistors, power electronics, and photonics.",
+      "licenseStatus": "Valid",
+      "supportedOS": [
+        "Linux RedHat 8/9",
+        "Windows Server 2022"
+      ],
+      "capabilities": {
+        "supports2DMesh": true,
+        "supports3D": true,
+        "supportsParallel": true,
+        "supportsOptimization": true,
+        "supportsPauseResume": true,
+        "supportedFileTypes": [
+          ".cmd",
+          ".tdr",
+          ".plt",
+          ".grd",
+          ".par",
+          ".msh"
+        ]
+      },
+      "createdAt": "2026-07-28T16:49:44.867Z",
+      "updatedAt": "2026-07-28T16:49:44.867Z"
+    },
+    "quantumatk": {
+      "id": "quantumatk",
+      "name": "QuantumATK Atomic-Scale Simulator",
+      "vendor": "Synopsys QuantumATK",
+      "version": "2023.12",
+      "status": "Active",
+      "description": "Atomic-scale modeling platform combining Density Functional Theory (DFT) and Non-Equilibrium Green Functions (NEGF).",
+      "licenseStatus": "Valid",
+      "supportedOS": [
+        "Linux Ubuntu/RedHat",
+        "Windows 11"
+      ],
+      "capabilities": {
+        "supports2DMesh": true,
+        "supports3D": true,
+        "supportsParallel": true,
+        "supportsOptimization": true,
+        "supportsPauseResume": false,
+        "supportedFileTypes": [
+          ".py",
+          ".nc",
+          ".hdf5",
+          ".xyz"
+        ]
+      },
+      "createdAt": "2026-07-28T16:49:44.868Z",
+      "updatedAt": "2026-07-28T16:49:44.868Z"
+    },
+    "comsol": {
+      "id": "comsol",
+      "name": "COMSOL Multiphysics",
+      "vendor": "COMSOL AB",
+      "version": "6.2",
+      "status": "Active",
+      "description": "Finite element analysis and multiphysics engineering modeling software.",
+      "licenseStatus": "Valid",
+      "supportedOS": [
+        "Windows 11/10",
+        "Linux x86_64"
+      ],
+      "capabilities": {
+        "supports2DMesh": true,
+        "supports3D": true,
+        "supportsParallel": true,
+        "supportsOptimization": true,
+        "supportsPauseResume": true,
+        "supportedFileTypes": [
+          ".mph",
+          ".m",
+          ".java"
+        ]
+      },
+      "createdAt": "2026-07-28T16:49:44.868Z",
+      "updatedAt": "2026-07-28T16:49:44.868Z"
+    },
+    "lumerical": {
+      "id": "lumerical",
+      "name": "Ansys Lumerical FDTD",
+      "vendor": "Ansys Inc.",
+      "version": "2024 R1",
+      "status": "Active",
+      "description": "Photonic component and photonic integrated circuit design simulation suite based on FDTD Maxwell solver.",
+      "licenseStatus": "Valid",
+      "supportedOS": [
+        "Windows 11",
+        "Linux RHEL"
+      ],
+      "capabilities": {
+        "supports2DMesh": true,
+        "supports3D": true,
+        "supportsParallel": true,
+        "supportsOptimization": true,
+        "supportsPauseResume": false,
+        "supportedFileTypes": [
+          ".fsp",
+          ".lsf"
+        ]
+      },
+      "createdAt": "2026-07-28T16:49:44.868Z",
+      "updatedAt": "2026-07-28T16:49:44.868Z"
+    },
+    "silvaco-atlas": {
+      "id": "silvaco-atlas",
+      "name": "Silvaco Atlas TCAD",
+      "vendor": "Silvaco Inc.",
+      "version": "5.32.0.R",
+      "status": "Active",
+      "description": "2D/3D device simulator for semiconductor technologies including Si, SiC, GaN, and organic semiconductors.",
+      "licenseStatus": "Valid",
+      "supportedOS": [
+        "Linux RHEL",
+        "Windows 10"
+      ],
+      "capabilities": {
+        "supports2DMesh": true,
+        "supports3D": true,
+        "supportsParallel": true,
+        "supportsOptimization": false,
+        "supportsPauseResume": false,
+        "supportedFileTypes": [
+          ".in",
+          ".str",
+          ".log"
+        ]
+      },
+      "createdAt": "2026-07-28T16:49:44.871Z",
+      "updatedAt": "2026-07-28T16:49:44.871Z"
+    }
+  },
+  "results": {},
+  "reports": {},
+  "users": {
+    "usr-default-admin": {
+      "id": "usr-default-admin",
+      "name": "Dr. Sarah Lin",
+      "email": "xmahkam1990@gmail.com",
+      "role": "ADMIN",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+      "createdAt": "2026-07-28T16:49:44.871Z",
+      "updatedAt": "2026-07-28T16:49:44.871Z"
+    }
+  },
+  "notifications": {},
+  "aiSessions": {},
+  "knowledgeBase": {
+    "kb-tcad-nanosheet": {
+      "id": "kb-tcad-nanosheet",
+      "category": "TCAD",
+      "title": "Multi-Channel FET Transport Physics",
+      "equations": [
+        "SS = (kT/q) * ln(10) * (1 + Cdep/Cox)"
+      ],
+      "description": "Quantum electrostatic confinement and high field velocity overshoot in silicon channels.",
+      "typicalParameters": {
+        "EOT_nm": "0.65",
+        "WorkFunction_eV": "4.62"
+      },
+      "commonAnomalies": [
+        "Unphysical current spikes due to sharp mesh interfaces"
+      ],
+      "createdAt": "2026-07-28T16:49:44.871Z",
+      "updatedAt": "2026-07-28T16:49:44.871Z"
+    }
+  },
+  "migrations": {
+    "v1": {
+      "id": "v1",
+      "version": 1,
+      "name": "v1_initial_schema_and_seed",
+      "appliedAt": "2026-07-28T16:49:44.872Z",
+      "createdAt": "2026-07-28T16:49:44.872Z",
+      "updatedAt": "2026-07-28T16:49:44.872Z"
+    }
+  },
+  "scheduler_queue": {}
+}

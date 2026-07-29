@@ -1,0 +1,36 @@
+{
+  "workspaceId": "workspace-exp-001-sim-job-1785229896003",
+  "experimentId": "exp-001",
+  "runId": "sim-job-1785229896003",
+  "pluginId": "sentaurus-tcad",
+  "simulator": "Synopsys Sentaurus",
+  "createdAt": "2026-07-28T09:11:36.058Z",
+  "updatedAt": "2026-07-28T09:11:37.409Z",
+  "status": "READY",
+  "executionState": "IDLE",
+  "isLocked": false,
+  "version": 2,
+  "permissions": {
+    "read": true,
+    "write": true,
+    "execute": true,
+    "ownerId": "system"
+  },
+  "sizeBytes": 0,
+  "inputFiles": [],
+  "outputFiles": [
+    "simulation_results.json"
+  ],
+  "reportFiles": [
+    "summary_report.json"
+  ],
+  "paths": {
+    "root": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003",
+    "input": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/input",
+    "output": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/output",
+    "logs": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/logs",
+    "temp": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/temp",
+    "reports": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/reports",
+    "metadata": "/app/applet/workspaces/experiment-exp-001/run-sim-job-1785229896003/metadata"
+  }
+}

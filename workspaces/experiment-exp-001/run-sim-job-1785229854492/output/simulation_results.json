@@ -1,0 +1,12 @@
+{
+  "id": "arp-res-1785229855620",
+  "experimentId": "exp-001",
+  "jobId": "sim-job-1785229854492",
+  "pluginId": "sentaurus-tcad",
+  "timestamp": "2026-07-28T09:10:55.620Z",
+  "metrics": {
+    "Status": "Waiting for real simulator output file"
+  },
+  "curves": [],
+  "summary": "Unified ARP Results converted for plugin \"sentaurus-tcad\". Extracted 1 scalar metric(s) and 0 vector curve(s)."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "AI Research Platform (ARP)",
+  "description": "Universal AI-powered platform for managing, automating, and optimizing scientific simulations across TCAD and multi-physics tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

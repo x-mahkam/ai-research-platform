@@ -1,0 +1,10 @@
+{
+  "jobId": "sim-job-1785229867769",
+  "experimentId": "exp-001",
+  "unifiedResultId": "arp-res-1785229868855",
+  "metrics": {
+    "Status": "Waiting for real simulator output file"
+  },
+  "durationSeconds": 8.5,
+  "generatedAt": "2026-07-28T09:11:08.926Z"
+}
