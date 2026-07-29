@@ -2,23 +2,10 @@ import express from 'express';
 import path from 'path';
 import { config } from './backend/configuration/index.js';
 import { logger } from './backend/logging/logger.js';
-import { container } from './backend/core/container.js';
-import { requestLogger, securityMiddleware, errorHandler } from './backend/api/middleware/index.js';
-import apiRouter from './backend/api/routes/index.js';
+import { createApiApp } from './backend/app.js';
 
 async function startServer() {
-  const app = express();
-
-  // Initialize DB & Container
-  await container.initialize();
-
-  // Core express middleware
-  app.use(express.json());
-  app.use(requestLogger);
-  app.use(securityMiddleware);
-
-  // Enterprise API Routes Layer (/api)
-  app.use('/api', apiRouter);
+  const app = await createApiApp();
 
   // Vite development server / Static asset production server
   if (process.env.NODE_ENV !== 'production') {
@@ -37,9 +24,6 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  // Centralized Error Handling Middleware
-  app.use(errorHandler);
 
   app.listen(config.port, '0.0.0.0', () => {
     logger.info(`[${config.serviceName} v${config.version}] Backend running on http://0.0.0.0:${config.port}`);
