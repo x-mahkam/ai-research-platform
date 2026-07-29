@@ -19,6 +19,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Project, Experiment, SimulatorPlugin } from '../../../types';
+import { apiClient } from '../../../services/apiClient';
 
 interface AIResearchEntryViewProps {
   plugins: SimulatorPlugin[];
@@ -44,6 +45,7 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
   const [objective, setObjective] = useState('');
   const [step, setStep] = useState<'prompt' | 'analysis' | 'model_select' | 'confirm'>('prompt');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   // AI Analyzed State
   const [analyzedData, setAnalyzedData] = useState<{
@@ -83,18 +85,21 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
     },
   ];
 
-  const handleAnalyzeObjective = (textToAnalyze?: string) => {
+  const handleAnalyzeObjective = async (textToAnalyze?: string) => {
     const text = textToAnalyze || objective;
     if (!text.trim()) return;
 
     if (textToAnalyze) setObjective(textToAnalyze);
 
     setIsAnalyzing(true);
+    setAnalysisError(null);
     setStep('analysis');
 
-    setTimeout(() => {
-      // Determine best simulator from text keywords. Plugin ids differ between
-      // the bundled defaults and the backend registry, so match on id/name keywords.
+    try {
+      const plan = await apiClient.planResearch(text);
+
+      // Resolve the plan's plugin id against the loaded plugin list; fall back
+      // to keyword matching since ids can differ between registry versions.
       const findPlugin = (keyword: string) =>
         plugins.find(
           (p) =>
@@ -103,45 +108,40 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
             (p.simulatorName || '').toLowerCase().includes(keyword)
         );
 
-      const lower = text.toLowerCase();
-      let matchedPlugin = findPlugin('sentaurus') || plugins[0];
-
-      if (lower.includes('comsol') || lower.includes('thermal') || lower.includes('heat') || lower.includes('mechanic')) {
-        matchedPlugin = findPlugin('comsol') || matchedPlugin;
-      } else if (lower.includes('quantumatk') || lower.includes('dft') || lower.includes('bandgap') || lower.includes('atomic') || lower.includes('2d')) {
-        matchedPlugin = findPlugin('quantum') || matchedPlugin;
-      } else if (lower.includes('lumerical') || lower.includes('photonic') || lower.includes('optic') || lower.includes('waveguide')) {
-        matchedPlugin = findPlugin('lumerical') || matchedPlugin;
-      } else if (lower.includes('openfoam') || lower.includes('cfd') || lower.includes('fluid') || lower.includes('turbulent')) {
-        matchedPlugin = findPlugin('openfoam') || matchedPlugin;
-      } else if (lower.includes('silvaco') || lower.includes('atlas')) {
-        matchedPlugin = findPlugin('silvaco') || matchedPlugin;
-      } else if (lower.includes('matlab') || lower.includes('simulink')) {
-        matchedPlugin = findPlugin('matlab') || matchedPlugin;
-      }
+      const planPluginKey = plan.recommendedPlugin.toLowerCase().split('-')[0];
+      const matchedPlugin =
+        plugins.find((p) => p.id === plan.recommendedPlugin) || findPlugin(planPluginKey) || plugins[0];
 
       if (!matchedPlugin) {
-        setIsAnalyzing(false);
-        setStep('prompt');
-        return;
+        throw new Error('No simulator plugins are registered on the backend.');
       }
 
       setAnalyzedData({
         detectedDomain: matchedPlugin.scientificFields?.[0] || 'Scientific Simulation',
         recommendedSimulator: matchedPlugin,
-        extractedMetrics: ['Subthreshold Swing (SS)', 'Threshold Voltage (Vt)', 'Thermal Dissipation', 'Target Convergence Score'],
-        suggestedParameters: {
-          Gate_Workfunction_eV: { value: 4.65, unit: 'eV', description: 'Metal Gate Workfunction' },
-          EOT_nm: { value: 0.70, unit: 'nm', description: 'Equivalent Oxide Thickness' },
-          Doping_Concentration: { value: 1e18, unit: 'cm^-3', description: 'Channel Doping' },
-          Drain_Voltage_V: { value: 0.75, unit: 'V', description: 'Vdd Operating Voltage' },
-        },
-        physicsSummary: `Objective parsed successfully. The AI Agent has selected ${matchedPlugin.name} as the authoritative numerical engine. Equations will be solved by native executable binaries.`,
+        extractedMetrics: plan.physicalModels,
+        suggestedParameters: Object.fromEntries(
+          Object.entries(plan.suggestedParameters).map(([key, value]) => [
+            key,
+            {
+              value: (typeof value === 'number' || typeof value === 'string' ? value : String(value)) as
+                | number
+                | string,
+              unit: '',
+              description: key.replace(/_/g, ' '),
+            },
+          ])
+        ),
+        physicsSummary: plan.rationale,
       });
 
-      setIsAnalyzing(false);
       setStep('model_select');
-    }, 1200);
+    } catch (err) {
+      setAnalysisError(err instanceof Error ? err.message : 'Objective analysis failed.');
+      setStep('prompt');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,6 +246,11 @@ File {
       {/* Main Research Goal Prompt Section */}
       {step === 'prompt' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
+          {analysisError && (
+            <div className="p-3 bg-red-950/50 border border-red-800/60 rounded-xl text-red-300 text-xs">
+              {analysisError}
+            </div>
+          )}
           <div className="space-y-2">
             <label className="block text-sm font-bold text-white flex items-center justify-between">
               <span className="flex items-center space-x-2">
@@ -342,9 +347,9 @@ File {
             <RefreshCw className="w-8 h-8 animate-spin" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-white">Parsing Scientific Objective...</h3>
+            <h3 className="text-lg font-bold text-white">Analyzing Scientific Objective...</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Extracting physical equations, selecting authoritative numerical solver, and mapping parameter boundaries.
+              The backend planning engine is selecting a numerical solver and proposing initial parameters.
             </p>
           </div>
         </div>

@@ -23,9 +23,14 @@ export class SimulationService {
     return job;
   }
 
-  public runSimulation(experimentId: string): Promise<SimulationJob> {
-    const job = this.sched.submitJob({ experimentId });
-    return Promise.resolve(this.getJobById(job.id));
+  public async runSimulation(experimentId: string): Promise<SimulationJob> {
+    // Drive execution through the engine pipeline, which creates a single job,
+    // registers it with the scheduler for queue visibility, and executes it.
+    // (Going through scheduler.submitJob directly here would leave the job
+    // dependent on the scheduler's execution handler, which is intentionally
+    // unwired to avoid a submit -> dispatch -> submit recursion.)
+    const job = await this.engine.submitAndExecute({ experimentId });
+    return this.getJobById(job.id);
   }
 
   public executeJobAction(id: string, action: 'pause' | 'resume' | 'cancel' | 'retry'): SimulationJob {

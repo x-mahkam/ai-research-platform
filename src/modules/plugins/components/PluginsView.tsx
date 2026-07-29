@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SimulatorPlugin } from '../../../types';
+import { apiClient } from '../../../services/apiClient';
 import {
   Blocks,
   CheckCircle2,
@@ -24,16 +25,39 @@ export const PluginsView: React.FC<PluginsViewProps> = ({ plugins }) => {
   const [isValidationRunning, setIsValidationRunning] = useState(false);
   const [validationResult, setValidationResult] = useState<string | null>(null);
 
-  const runPluginValidation = () => {
+  const runPluginValidation = async () => {
     if (!selectedPlugin) return;
     setIsValidationRunning(true);
     setValidationResult(null);
-    setTimeout(() => {
-      setIsValidationRunning(false);
+    try {
+      const report = await apiClient.getPluginsHealth();
+      const health = report.plugins[selectedPlugin.id];
+      if (!health) {
+        setValidationResult(
+          `✗ Plugin "${selectedPlugin.id}" is not registered in the backend runtime.\n` +
+            `Registered plugins: ${Object.keys(report.plugins).join(', ') || '(none)'}`
+        );
+      } else {
+        const marker = health.status === 'HEALTHY' ? '✓' : health.status === 'DEGRADED' ? '⚠' : '✗';
+        setValidationResult(
+          [
+            `${marker} Health status: ${health.status}`,
+            `Last checked: ${health.lastChecked}`,
+            `Uptime: ${health.uptimeSeconds}s`,
+            health.details ? `Details: ${health.details}` : null,
+            `System: ${report.healthyCount}/${report.totalPlugins} plugins healthy`,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        );
+      }
+    } catch (err) {
       setValidationResult(
-        `✓ Plugin SDK Validation Passed for ${selectedPlugin.name}\n✓ Executable verified: /usr/synopsys/sentaurus/${selectedPlugin.version}/bin/sdevice\n✓ License daemon status: 12 Floating Licenses Available\n✓ File handlers registered for: ${(selectedPlugin.capabilities?.supportedFileTypes || []).join(', ')}`
+        `✗ Health check failed: ${err instanceof Error ? err.message : 'backend unreachable'}`
       );
-    }, 1500);
+    } finally {
+      setIsValidationRunning(false);
+    }
   };
 
   return (

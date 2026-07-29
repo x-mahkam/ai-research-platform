@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Project,
   Experiment,
@@ -21,63 +21,74 @@ import { AIResearchEntryView } from './modules/ai/components/AIResearchEntryView
 import { ReportGeneratorView } from './modules/reports/components/ReportGeneratorView';
 import { NewExperimentModal } from './modules/experiments/components/NewExperimentModal';
 
-import {
-  DEFAULT_PROJECTS,
-  DEFAULT_EXPERIMENTS,
-  DEFAULT_SIMULATIONS,
-  DEFAULT_PLUGINS,
-  DEFAULT_OPTIMIZATIONS,
-  DEFAULT_REPORTS,
-} from './data/defaultData';
 import { apiClient } from './services/apiClient';
+
+type BackendStatus = 'loading' | 'online' | 'offline';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('ai_assistant');
   const [aiSubMode, setAiSubMode] = useState<'entry' | 'chat'>('entry');
 
-  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
-  const [experiments, setExperiments] = useState<Experiment[]>(DEFAULT_EXPERIMENTS);
-  const [simulationJobs, setSimulationJobs] = useState<SimulationJob[]>(DEFAULT_SIMULATIONS);
-  const [plugins, setPlugins] = useState<SimulatorPlugin[]>(DEFAULT_PLUGINS);
-  const [optimizationJobs, setOptimizationJobs] = useState<OptimizationJob[]>(DEFAULT_OPTIMIZATIONS);
-  const [reports, setReports] = useState<GeneratedReport[]>(DEFAULT_REPORTS);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [simulationJobs, setSimulationJobs] = useState<SimulationJob[]>([]);
+  const [plugins, setPlugins] = useState<SimulatorPlugin[]>([]);
+  const [optimizationJobs, setOptimizationJobs] = useState<OptimizationJob[]>([]);
+  const [reports, setReports] = useState<GeneratedReport[]>([]);
 
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(DEFAULT_PROJECTS[0]?.id || null);
-  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(DEFAULT_EXPERIMENTS[0]?.id || null);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [isNewExperimentModalOpen, setIsNewExperimentModalOpen] = useState(false);
 
-  // Sync data from server endpoints if available
-  useEffect(() => {
-    apiClient.getProjects().then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setProjects(data);
-        setActiveProjectId((prev) => prev || data[0]?.id || null);
-      }
-    }).catch(() => {});
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('loading');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    apiClient.getExperiments().then((data) => {
-      if (Array.isArray(data) && data.length > 0) {
-        setExperiments(data);
-        setActiveExperimentId((prev) => prev || data[0]?.id || null);
-      }
-    }).catch(() => {});
+  const reportError = (context: string, err: unknown) => {
+    const detail = err instanceof Error ? err.message : String(err);
+    setErrorMessage(`${context}: ${detail}`);
+  };
 
-    apiClient.getSimulations().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setSimulationJobs(data);
-    }).catch(() => {});
+  // Load all collections from the backend. The UI shows real state only:
+  // an empty backend renders empty, an unreachable backend shows "offline".
+  const loadAllData = useCallback(async () => {
+    try {
+      const [projectsData, experimentsData, simulationsData, pluginsData, optimizationsData, reportsData] =
+        await Promise.all([
+          apiClient.getProjects(),
+          apiClient.getExperiments(),
+          apiClient.getSimulations(),
+          apiClient.getPlugins(),
+          apiClient.getOptimizations(),
+          apiClient.getReports(),
+        ]);
 
-    apiClient.getPlugins().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setPlugins(data);
-    }).catch(() => {});
-
-    apiClient.getOptimizations().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setOptimizationJobs(data);
-    }).catch(() => {});
-
-    apiClient.getReports().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setReports(data);
-    }).catch(() => {});
+      setProjects(projectsData);
+      setExperiments(experimentsData);
+      setSimulationJobs(simulationsData);
+      setPlugins(pluginsData);
+      setOptimizationJobs(optimizationsData);
+      setReports(reportsData);
+      setActiveProjectId((prev) => prev || projectsData[0]?.id || null);
+      setActiveExperimentId((prev) => prev || experimentsData[0]?.id || null);
+      setBackendStatus('online');
+    } catch {
+      setBackendStatus('offline');
+    }
   }, []);
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  // Keep simulation jobs live while the backend is reachable, so launched
+  // jobs progress past "Queued" and completed results surface.
+  useEffect(() => {
+    if (backendStatus !== 'online') return;
+    const interval = setInterval(() => {
+      apiClient.getSimulations().then(setSimulationJobs).catch(() => setBackendStatus('offline'));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [backendStatus]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const activeExperiment = experiments.find((e) => e.id === activeExperimentId) || experiments[0];
@@ -88,29 +99,30 @@ export default function App() {
       const newProj = await apiClient.createProject(projectData);
       setProjects((prev) => [newProj, ...prev]);
       setActiveProjectId(newProj.id);
-    } catch {
-      const fallbackProj: Project = {
-        id: `proj-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...projectData,
-      };
-      setProjects((prev) => [fallbackProj, ...prev]);
-      setActiveProjectId(fallbackProj.id);
+    } catch (err) {
+      reportError('Failed to create project', err);
     }
   };
 
-  const handleUpdateProject = (id: string, updates: Partial<Project>) => {
-    setProjects((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p))
-    );
+  const handleUpdateProject = async (id: string, updates: Partial<Project>) => {
+    try {
+      const updated = await apiClient.updateProject(id, updates);
+      setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    } catch (err) {
+      reportError('Failed to update project', err);
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    if (activeProjectId === id) {
-      const remaining = projects.filter((p) => p.id !== id);
-      setActiveProjectId(remaining[0]?.id || null);
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await apiClient.deleteProject(id);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      if (activeProjectId === id) {
+        const remaining = projects.filter((p) => p.id !== id);
+        setActiveProjectId(remaining[0]?.id || null);
+      }
+    } catch (err) {
+      reportError('Failed to delete project', err);
     }
   };
 
@@ -120,25 +132,8 @@ export default function App() {
       const newExp = await apiClient.createExperiment(expData);
       setExperiments((prev) => [newExp, ...prev]);
       setActiveExperimentId(newExp.id);
-    } catch {
-      const fallbackExp: Experiment = {
-        id: `exp-${Date.now()}`,
-        projectId: expData.projectId || activeProjectId || 'proj-001',
-        title: expData.title || 'New Simulation Experiment',
-        description: expData.description || '',
-        pluginId: expData.pluginId || 'sentaurus-tcad',
-        status: 'Ready',
-        version: 1,
-        parameters: expData.parameters || [],
-        notes: [],
-        attachments: [],
-        tags: expData.tags || ['Sentaurus'],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: 'Researcher',
-      };
-      setExperiments((prev) => [fallbackExp, ...prev]);
-      setActiveExperimentId(fallbackExp.id);
+    } catch (err) {
+      reportError('Failed to create experiment', err);
     }
   };
 
@@ -148,58 +143,33 @@ export default function App() {
       const clonedExp = await apiClient.cloneExperiment(id);
       setExperiments((prev) => [clonedExp, ...prev]);
       setActiveExperimentId(clonedExp.id);
-    } catch {
-      const target = experiments.find((e) => e.id === id);
-      if (!target) return;
-      const clone: Experiment = {
-        ...target,
-        id: `exp-${Date.now()}`,
-        parentId: target.id,
-        title: `${target.title} (Clone v${target.version + 1})`,
-        version: target.version + 1,
-        status: 'Ready',
-        results: undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setExperiments((prev) => [clone, ...prev]);
-      setActiveExperimentId(clone.id);
+    } catch (err) {
+      reportError('Failed to clone experiment', err);
     }
   };
 
-  const handleUpdateExperiment = (id: string, updates: Partial<Experiment>) => {
+  const handleUpdateExperiment = async (id: string, updates: Partial<Experiment>) => {
+    // Optimistic local update keeps parameter sliders responsive; the server
+    // response is the source of truth and replaces it.
     setExperiments((prev) =>
       prev.map((e) => (e.id === id ? { ...e, ...updates, updatedAt: new Date().toISOString() } : e))
     );
+    try {
+      const updated = await apiClient.updateExperiment(id, updates);
+      setExperiments((prev) => prev.map((e) => (e.id === id ? updated : e)));
+    } catch (err) {
+      reportError('Failed to save experiment changes', err);
+    }
   };
 
   // Handler: Launch Simulation Job (ARP-013)
   const handleRunSimulation = async (expId: string) => {
     try {
       const newJob = await apiClient.runSimulation(expId);
-      setSimulationJobs((prev) => [newJob, ...prev]);
+      setSimulationJobs((prev) => [newJob, ...prev.filter((j) => j.id !== newJob.id)]);
       setActiveTab('queue');
-    } catch {
-      const targetExp = experiments.find((e) => e.id === expId);
-      const fallbackJob: SimulationJob = {
-        id: `sim-job-${Date.now()}`,
-        experimentId: expId,
-        experimentTitle: targetExp?.title || 'TCAD Simulation',
-        pluginId: 'sentaurus-tcad',
-        pluginName: 'Synopsys Sentaurus TCAD',
-        status: 'Running',
-        progress: 15,
-        startTime: new Date().toISOString(),
-        cpuUsage: 82,
-        memoryUsage: 9.2,
-        hostMachine: 'node-compute-03.arp.local',
-        logs: [
-          `[${new Date().toLocaleTimeString()}] Sentaurus TCAD Solver process launched.`,
-          `[${new Date().toLocaleTimeString()}] Grid mesh loaded into memory. Solving Poisson-Schrödinger hydrodynamic system...`,
-        ],
-      };
-      setSimulationJobs((prev) => [fallbackJob, ...prev]);
-      setActiveTab('queue');
+    } catch (err) {
+      reportError('Failed to launch simulation', err);
     }
   };
 
@@ -208,25 +178,8 @@ export default function App() {
     try {
       const updatedJob = await apiClient.performJobAction(jobId, action);
       setSimulationJobs((prev) => prev.map((j) => (j.id === jobId ? updatedJob : j)));
-    } catch {
-      setSimulationJobs((prev) =>
-        prev.map((j) => {
-          if (j.id === jobId) {
-            const statusMap: Record<string, any> = {
-              pause: 'Paused',
-              resume: 'Running',
-              cancel: 'Cancelled',
-              retry: 'Running',
-            };
-            return {
-              ...j,
-              status: statusMap[action] || j.status,
-              logs: [...j.logs, `[${new Date().toLocaleTimeString()}] User performed action: ${action}`],
-            };
-          }
-          return j;
-        })
-      );
+    } catch (err) {
+      reportError(`Failed to ${action} job`, err);
     }
   };
 
@@ -235,34 +188,8 @@ export default function App() {
     try {
       const updated = await apiClient.stepOptimization(jobId);
       setOptimizationJobs((prev) => prev.map((j) => (j.id === jobId ? updated : j)));
-    } catch {
-      setOptimizationJobs((prev) =>
-        prev.map((job) => {
-          if (job.id === jobId) {
-            const nextIter = job.currentIteration + 1;
-            const nextVal = (job.bestValue || 5e6) * 1.08;
-            return {
-              ...job,
-              currentIteration: nextIter,
-              bestValue: nextVal,
-              history: [
-                ...job.history,
-                {
-                  iteration: nextIter,
-                  parameters: {
-                    Gate_Length_nm: Number((10 + Math.random() * 4).toFixed(1)),
-                    WorkFunction_eV: Number((4.5 + Math.random() * 0.2).toFixed(2)),
-                  },
-                  objectiveValue: nextVal,
-                  isParetoOptimal: true,
-                },
-              ],
-              status: nextIter >= job.maxIterations ? 'Completed' : 'Running',
-            };
-          }
-          return job;
-        })
-      );
+    } catch (err) {
+      reportError('Failed to step optimization', err);
     }
   };
 
@@ -272,20 +199,8 @@ export default function App() {
       const newReport = await apiClient.generateReport(exp, activeProject?.title || 'ARP Project');
       setReports((prev) => [newReport, ...prev]);
       setActiveTab('reports');
-    } catch {
-      const fallbackReport: GeneratedReport = {
-        id: `rep-${Date.now()}`,
-        experimentId: exp.id,
-        experimentTitle: exp.title,
-        projectName: activeProject?.title || 'ARP Project',
-        title: `${exp.title} Scientific Report`,
-        author: 'AI Scientist Agent',
-        createdAt: new Date().toISOString(),
-        version: '1.0',
-        markdownContent: `# Scientific Report: ${exp.title}\n\n## 1. Executive Summary\nTCAD simulation completed successfully using Sentaurus TCAD plugin.`,
-      };
-      setReports((prev) => [fallbackReport, ...prev]);
-      setActiveTab('reports');
+    } catch (err) {
+      reportError('Failed to generate report', err);
     }
   };
 
@@ -316,31 +231,23 @@ export default function App() {
         tags: ['AI-Orchestrated', config.simulatorId],
       };
 
-      const newProj = await apiClient.createProject(projectData).catch(() => ({
-        id: `proj-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        ...projectData,
-      }));
+      const newProj = await apiClient.createProject(projectData);
 
       setProjects((prev) => [newProj, ...prev]);
       setActiveProjectId(newProj.id);
 
-      // 2. Upload model file
+      // 2. Upload model file (backend derives size/checksum/path from content)
       await apiClient.createProjectModel(newProj.id, {
         fileName: config.modelFileName,
         fileType: config.modelFormat,
         simulator: config.simulatorId,
         physicsModule: 'Hydrodynamic',
         owner: 'AI Agent',
-        absolutePath: `/workspaces/projects/${newProj.id}/models/${config.modelFileName}`,
-        fileSize: 12288,
-        checksum: 'sha256-a1b2c3d4',
         content: config.modelFileContent,
         description: `Model file for ${config.title}`,
         version: '1.0',
         isDefault: true,
-      }).catch(() => {});
+      });
 
       // 3. Create experiment
       const paramList = Object.entries(config.initialParameters).map(([key, val]) => ({
@@ -375,10 +282,7 @@ export default function App() {
         createdBy: 'AI Agent',
       };
 
-      const newExp = await apiClient.createExperiment(newExpData).catch(() => ({
-        id: `exp-${Date.now()}`,
-        ...newExpData,
-      }));
+      const newExp = await apiClient.createExperiment(newExpData);
 
       setExperiments((prev) => [newExp, ...prev]);
       setActiveExperimentId(newExp.id);
@@ -386,11 +290,22 @@ export default function App() {
       // 4. Automatically run simulation and switch to queue/execution view
       await handleRunSimulation(newExp.id);
     } catch (err) {
-      console.error('Error launching AI research:', err);
+      reportError('Failed to launch AI research workflow', err);
     }
   };
 
   const runningJobCount = simulationJobs.filter((j) => j.status === 'Running').length;
+
+  if (backendStatus === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-slate-400 font-mono">Connecting to AI Research Platform backend...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="app-root" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased">
@@ -406,6 +321,36 @@ export default function App() {
         onQuickRunSimulation={() => activeExperimentId && handleRunSimulation(activeExperimentId)}
         runningJobCount={runningJobCount}
       />
+
+      {/* Backend connectivity / error banners */}
+      {backendStatus === 'offline' && (
+        <div className="bg-red-950/80 border-b border-red-800 text-red-200 text-xs px-4 py-2 flex items-center justify-between">
+          <span>
+            Backend is unreachable — data shown may be stale and actions will fail. Check that the server is
+            running, then retry.
+          </span>
+          <button
+            onClick={() => {
+              setBackendStatus('loading');
+              loadAllData();
+            }}
+            className="px-3 py-1 rounded bg-red-800 hover:bg-red-700 text-white font-semibold cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {errorMessage && (
+        <div className="bg-amber-950/80 border-b border-amber-800 text-amber-200 text-xs px-4 py-2 flex items-center justify-between">
+          <span>{errorMessage}</span>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="px-3 py-1 rounded bg-amber-800 hover:bg-amber-700 text-white font-semibold cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Main Container */}
       <div className="flex flex-1 overflow-hidden">

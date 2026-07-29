@@ -127,6 +127,66 @@ export class ApiClient {
     return res.json();
   }
 
+  public async updateProject(id: string, updates: Partial<Project>): Promise<Project> {
+    const res = await fetch(`/api/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Failed to update project');
+    return res.json();
+  }
+
+  public async deleteProject(id: string): Promise<void> {
+    const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete project');
+  }
+
+  public async updateExperiment(id: string, updates: Partial<Experiment>): Promise<Experiment> {
+    const res = await fetch(`/api/experiments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Failed to update experiment');
+    return res.json();
+  }
+
+  public async planResearch(goal: string): Promise<{
+    planId: string;
+    recommendedPlugin: string;
+    physicalModels: string[];
+    suggestedParameters: Record<string, unknown>;
+    voltageSweepConfig: { start: number; stop: number; step: number };
+    meshResolution: string;
+    rationale: string;
+  }> {
+    const res = await fetch('/api/ai/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal }),
+    });
+    if (!res.ok) throw new Error('Failed to analyze research objective');
+    // The endpoint wraps the plan: { agent: 'PlannerAgent', plan: {...} }
+    const payload = await res.json();
+    return payload.plan ?? payload;
+  }
+
+  public async getPluginsHealth(): Promise<{
+    timestamp: string;
+    totalPlugins: number;
+    healthyCount: number;
+    unhealthyCount: number;
+    plugins: Record<
+      string,
+      { status: 'HEALTHY' | 'DEGRADED' | 'UNHEALTHY'; uptimeSeconds: number; lastChecked: string; details?: string }
+    >;
+  }> {
+    const res = await fetch('/api/plugins/health');
+    if (!res.ok) throw new Error('Failed to check plugin health');
+    return res.json();
+  }
+
   public async createExperiment(expData: Partial<Experiment>): Promise<Experiment> {
     const res = await fetch('/api/experiments', {
       method: 'POST',
