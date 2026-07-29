@@ -24,6 +24,9 @@ export class PersistentDatabaseEngine {
   private dbFilePath: string;
   private data: IDatabaseSchema;
   private isSaving = false;
+  private dirty = false;
+  private pendingAgain = false;
+  private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(customPath?: string) {
     this.dbFilePath = customPath || path.join(process.cwd(), 'storage', 'database.json');
@@ -81,7 +84,52 @@ export class PersistentDatabaseEngine {
     }
   }
 
+  // Async, non-blocking persist. A full-database writeFileSync on every single
+  // mutation blocks the event loop — under a running simulation (status
+  // transitions + 2s telemetry log appends across multiple jobs) the storm of
+  // synchronous full-file rewrites froze the server. Writes are coalesced: a
+  // burst of mutations results in a single disk write, and any mutation that
+  // arrives mid-write triggers exactly one more write afterwards.
+  private async saveToDiskAsync(): Promise<void> {
+    if (this.isSaving) {
+      this.pendingAgain = true;
+      return;
+    }
+    this.isSaving = true;
+    this.dirty = false;
+    try {
+      const tempPath = `${this.dbFilePath}.tmp`;
+      await fs.promises.writeFile(tempPath, JSON.stringify(this.data, null, 2), 'utf-8');
+      await fs.promises.rename(tempPath, this.dbFilePath);
+    } catch (err: any) {
+      logger.error(`Failed to flush database to disk: ${err.message}`);
+      this.dirty = true;
+    } finally {
+      this.isSaving = false;
+      if (this.pendingAgain || this.dirty) {
+        this.pendingAgain = false;
+        void this.saveToDiskAsync();
+      }
+    }
+  }
+
   public flush(): void {
+    // Debounce rapid mutations into a single asynchronous write.
+    this.dirty = true;
+    if (this.flushTimer) return;
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = null;
+      void this.saveToDiskAsync();
+    }, 50);
+  }
+
+  // Synchronous flush for process shutdown, where the event loop is ending and
+  // pending async writes would not complete.
+  public flushSync(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = null;
+    }
     this.saveToDiskSync();
   }
 
@@ -161,3 +209,21 @@ export class PersistentDatabaseEngine {
 }
 
 export const persistentDbEngine = new PersistentDatabaseEngine();
+
+// Persist any pending in-memory changes synchronously before the process exits.
+const flushOnExit = () => {
+  try {
+    persistentDbEngine.flushSync();
+  } catch {
+    // best-effort on shutdown
+  }
+};
+process.once('SIGINT', () => {
+  flushOnExit();
+  process.exit(0);
+});
+process.once('SIGTERM', () => {
+  flushOnExit();
+  process.exit(0);
+});
+process.once('beforeExit', flushOnExit);

@@ -50,7 +50,11 @@ export class SimulationEngineOrchestrator {
     // STAGE 3: Queue
     logger.info(`[Pipeline Stage 3] Queueing Job ${job.id}`);
     simulationLifecycleManager.transitionTo(job.id, 'QUEUED', 'Enqueued for scheduling');
-    simulationScheduler.enqueue(job.id, request.priority || 5);
+    // NB: the engine owns this job's execution and its simulationRepository
+    // status end-to-end. It must NOT also hand the job to the enterprise
+    // scheduler — the scheduler's dispatch would concurrently rewrite the job's
+    // status back to "Running" after the engine already marked it "Completed",
+    // leaving it stuck. The scheduler remains available for its own queue APIs.
     experimentRepository.update(job.experimentId, { status: 'Queued' });
 
     // Asynchronously kick off dispatch pipeline
@@ -61,8 +65,10 @@ export class SimulationEngineOrchestrator {
 
   private async processPipelineAsync(jobId: string, experimentId: string): Promise<void> {
     try {
-      // STAGE 4: Worker Assignment
-      const dequeuedJobId = simulationScheduler.dequeueNext() || jobId;
+      // STAGE 4: Worker Assignment. Execute the job we were given directly —
+      // using the scheduler's "next queued" here races when several jobs are
+      // queued and could execute the wrong one.
+      const dequeuedJobId = jobId;
       logger.info(`[Pipeline Stage 4] Worker Assignment for Job ${dequeuedJobId}`);
       
       simulationLifecycleManager.transitionTo(dequeuedJobId, 'ASSIGNED', 'Assigning worker node');
@@ -224,8 +230,11 @@ export class SimulationEngineOrchestrator {
 
 export const simulationEngineOrchestrator = new SimulationEngineOrchestrator();
 
-// Wire scheduler execution handler to break circular import cycle
+// The engine drives execution itself via processPipelineAsync (Stages 4-8).
+// Do NOT wire the scheduler's execution handler back to submitAndExecute:
+// submitAndExecute enqueues into the scheduler, and the scheduler tick would
+// call the handler, which would submitAndExecute again — an unbounded loop that
+// spawns a new job every cycle and floods the event loop with synchronous
+// filesystem writes until the server stops responding. The scheduler is used
+// for queue/worker bookkeeping only; the engine is the single execution driver.
 simulationScheduler; // ensure initialization
-import('../../scheduler/index.js').then(({ scheduler }) => {
-  scheduler.setExecutionHandler((req) => simulationEngineOrchestrator.submitAndExecute(req));
-}).catch(() => {});
