@@ -1,6 +1,5 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 import { config } from './backend/configuration/index.js';
 import { logger } from './backend/logging/logger.js';
 import { container } from './backend/core/container.js';
@@ -23,6 +22,9 @@ async function startServer() {
 
   // Vite development server / Static asset production server
   if (process.env.NODE_ENV !== 'production') {
+    // Import Vite lazily so the production bundle never requires it at runtime
+    // (Vite is a devDependency and is absent from a production install).
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

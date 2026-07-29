@@ -3,7 +3,9 @@ services:
     name: ai-research-platform
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    # NODE_ENV=production makes `npm install` omit devDependencies, but the
+    # build tools (vite, esbuild, tsx, typescript) live there — force them in.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
