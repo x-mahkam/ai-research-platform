@@ -43,6 +43,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   const [tagsInput, setTagsInput] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [modelPath, setModelPath] = useState<string>('');
 
   // Load models whenever target project changes
   useEffect(() => {
@@ -134,6 +135,49 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
       setUploading(false);
       // Allow re-picking the same file name later.
       e.target.value = '';
+    }
+  };
+
+  // Register a model by its absolute path on this machine instead of uploading
+  // its bytes. This is the right path for large / binary solver files (e.g. a
+  // multi-MB COMSOL .mph, which is a binary zip): the locally-running server
+  // reads the file in place, so there is no upload size limit and no corruption.
+  const handleUseFilePath = async () => {
+    const p = modelPath.trim();
+    if (!p || !projectId) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const base = p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'model';
+      let meta: { simulator: string; physicsModule: string; fileType: string } = {
+        simulator: selectedProject?.simulator || 'Synopsys Sentaurus TCAD',
+        physicsModule: 'Hydrodynamic',
+        fileType: '',
+      };
+      try {
+        meta = { ...meta, ...(await apiClient.detectModelMeta(base)) };
+      } catch {
+        // fall back to project defaults
+      }
+      const created = await apiClient.createProjectModel(projectId, {
+        fileName: base,
+        absolutePath: p,
+        simulator: meta.simulator,
+        physicsModule: meta.physicsModule,
+        fileType: meta.fileType,
+        description: `References ${p} on disk`,
+      });
+      const models = await apiClient.getProjectModels(projectId);
+      setProjectModels(models);
+      setSelectedModelId(created.id);
+      setTitle(`Sweep: ${created.fileName}`);
+      setResearchGoal(created.description || '');
+      setTagsInput(`${created.simulator}, ${created.physicsModule}`);
+      setModelPath('');
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to add model by path.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -262,6 +306,33 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                 accept=".cmd,.mph,.py,.in,.fsp,.m,.foam,.txt,.dat,.tcl,.grd,.par"
               />
             </label>
+
+            {/* Reference a file on disk by path — required for large / binary
+                solver files such as a COMSOL .mph (they can't be uploaded as text). */}
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={modelPath}
+                  onChange={(e) => setModelPath(e.target.value)}
+                  placeholder="…or full path on this computer, e.g. D:\\models\\heatsink.mph"
+                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-[11px] text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleUseFilePath}
+                  disabled={uploading || !modelPath.trim()}
+                  className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap"
+                >
+                  Use file path
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                Recommended for COMSOL .mph and other large/binary models — the file is read in
+                place when the platform runs on the same machine as the solver.
+              </p>
+            </div>
+
             {uploadError && (
               <p className="mt-1 text-[11px] text-red-400">{uploadError}</p>
             )}

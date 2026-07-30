@@ -14,7 +14,9 @@ export async function createApiApp(): Promise<Express> {
 
   await container.initialize();
 
-  app.use(express.json());
+  // Model files (uploaded content) can be much larger than Express's 100kb
+  // default, which otherwise fails uploads with "request entity too large".
+  app.use(express.json({ limit: '50mb' }));
   app.use(requestLogger);
   app.use(securityMiddleware);
   app.use('/api', apiRouter);
