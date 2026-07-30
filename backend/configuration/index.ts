@@ -23,7 +23,10 @@ export const config: AppConfig = {
   version: '0.1.0',
   gemini: {
     apiKey: process.env.GEMINI_API_KEY,
-    modelName: 'gemini-3.6-flash',
+    // 'gemini-3.6-flash' is not a real model — it made every AI call 404 and
+    // silently fall back to a canned template. Default to a current model and
+    // allow an override via GEMINI_MODEL.
+    modelName: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
     userAgent: 'aistudio-build',
     temperature: 0.2,
   },

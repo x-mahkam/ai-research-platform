@@ -116,10 +116,20 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
         textResponse = response.text || 'Unable to generate analysis output from AI Engine.';
       } catch (err: any) {
         logger.error('Error contacting Gemini API in AI Engine Orchestrator', { error: err.message });
-        textResponse = this.generatePhysicsFallbackResponse(prompt, context, suggestedParameters, analysisReport);
+        textResponse = this.generatePhysicsFallbackResponse(
+          prompt,
+          context,
+          suggestedParameters,
+          `The AI model call failed: ${err.message}`
+        );
       }
     } else {
-      textResponse = this.generatePhysicsFallbackResponse(prompt, context, suggestedParameters, analysisReport);
+      textResponse = this.generatePhysicsFallbackResponse(
+        prompt,
+        context,
+        suggestedParameters,
+        'GEMINI_API_KEY is not set on the server.'
+      );
     }
 
     // 5. Save in Memory
@@ -151,30 +161,31 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     prompt: string,
     context: any,
     suggestedParameters?: Record<string, unknown>,
-    analysisReport?: any
+    reason?: string
   ): string {
-    return `### ⚛️ AI Research Engine Physics Analysis
+    const paramBlock =
+      suggestedParameters && Object.keys(suggestedParameters).length > 0
+        ? Object.entries(suggestedParameters)
+            .map(([k, v]) => `- **${k}:** \`${v}\``)
+            .join('\n')
+        : '_No parameter suggestions available._';
 
-**Request Context:** "${prompt}"
-**Simulator Context:** \`${context.pluginId || 'Sentaurus TCAD Engine'}\`
+    // Be explicit that this is NOT an LLM response — otherwise a canned template
+    // reads as real AI analysis.
+    return `> ⚠️ **AI language model is not active — this is a built-in fallback, not an AI-generated answer.**
+> Reason: ${reason || 'The AI model call did not succeed.'}
+>
+> To enable real AI analysis, set \`GEMINI_API_KEY\` in your \`.env\` (get a free key at
+> https://aistudio.google.com/apikey). You can also pin a model with \`GEMINI_MODEL\`
+> (default: \`gemini-2.5-flash\`). Then restart the server.
 
 ---
 
-#### 1. Physical Mechanism Explanation
-- **Electrostatic Control:** In ultra-scaled geometries, subthreshold swing ($SS$) is governed by gate capacitance coupling relative to depletion layer capacitance ($SS = \\frac{kT}{q} \\ln(10) (1 + \\frac{C_{dep}}{C_{ox}})$).
-- **Quantum Potential Corrections:** Density gradient formulations account for quantum mechanical carrier repulsion near dielectric interfaces, shifting peak electron concentration ~1.2 nm into the silicon channel body.
+**Request:** "${prompt}"
+**Simulator context:** \`${context?.pluginId || 'n/a'}\`
 
-#### 2. Parameter Recommendations
-${
-  suggestedParameters
-    ? Object.entries(suggestedParameters)
-        .map(([k, v]) => `- **${k}:** \`${v}\``)
-        .join('\n')
-    : `- **WorkFunction_eV:** \`4.62 eV\`\n- **EOT_nm:** \`0.68 nm\`\n- **MeshDensity:** \`250 nodes/µm\``
-}
-
-#### 3. AI Research Guidance
-*Note: The AI Engine performs planning, parameter recommendation, and result analysis. Simulation execution is handled autonomously by the Simulation Engine.*`;
+**Deterministic parameter suggestions (rule-based, not AI):**
+${paramBlock}`;
   }
 }
 
