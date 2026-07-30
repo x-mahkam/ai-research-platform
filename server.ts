@@ -1,3 +1,6 @@
+// Load .env before anything reads process.env (e.g. COMSOL_EXECUTABLE,
+// DATABASE_URL, GEMINI_API_KEY, PORT).
+import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
