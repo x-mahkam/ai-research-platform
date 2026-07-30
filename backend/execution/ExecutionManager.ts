@@ -33,7 +33,16 @@ export class ExecutionManager {
     this.dispatcher = dispatcher;
     this.distributor = distributor;
 
-    // Start health monitoring and dispatch loops
+    // NOTE: the distributed-node execution layer (NodeRegistry / health monitor /
+    // dispatcher) is not on the active run path — real execution goes through the
+    // simulation engine + plugin adapters. Auto-starting the monitors here only
+    // spammed the console with "node missed heartbeat" warnings for seeded
+    // placeholder nodes. Call startBackgroundLoops() explicitly if this layer is
+    // ever wired up for real.
+  }
+
+  /** Opt-in start of the distributed health-monitor and dispatch loops. */
+  public startBackgroundLoops(): void {
     this.healthMonitor.startMonitoring(15000);
     this.dispatcher.startDispatcher(300);
   }
