@@ -13,6 +13,8 @@ import { resultManager } from '../../results/index.js';
 import { notificationService } from '../../notifications/notificationService.js';
 import { experimentRepository } from '../../repositories/experimentRepository.js';
 import { simulationRepository } from '../../repositories/simulationRepository.js';
+import { modelRepository } from '../../repositories/modelRepository.js';
+import { resolvePluginId } from '../pluginResolver.js';
 import { LoggerService } from '../../logging/logger.js';
 import { generateId, getCurrentTimestamp, formatLogTimestamp } from '../../shared/utils.js';
 
@@ -96,12 +98,30 @@ export class SimulationEngineOrchestrator {
       }
 
       const jobParams = (job?.parameters as Record<string, unknown>) || {};
+
+      // Resolve the experiment's model so we can (a) route to the real solver
+      // plugin by simulator, and (b) hand the solver the actual model file path.
+      const experiment = experimentRepository.findById(experimentId);
+      const model = experiment?.modelId ? modelRepository.findById(experiment.modelId) : undefined;
+      const simulatorName = model?.simulator || experiment?.simulator;
+
+      const resolvedPluginId =
+        resolvePluginId(job?.pluginId, simulatorName) ||
+        job?.pluginId ||
+        (jobParams.solverPluginId as string) ||
+        'sentaurus-tcad';
+
+      // The solver reads the model from an absolute path when provided (e.g. the
+      // user's own COMSOL .mph on disk); otherwise it falls back to a file in
+      // the run workspace input/ folder.
+      const inputModelPath = (jobParams.inputModelPath as string) || model?.absolutePath;
+
       const executionContext: ISimulationExecutionContext = {
         jobId: dequeuedJobId,
         workerId: worker.id,
         experimentId,
-        pluginId: job?.pluginId || (jobParams.solverPluginId as string) || 'sentaurus-tcad',
-        parameters: jobParams,
+        pluginId: resolvedPluginId,
+        parameters: inputModelPath ? { ...jobParams, inputModelPath } : jobParams,
         workspacePath,
         startTime: getCurrentTimestamp(),
       };

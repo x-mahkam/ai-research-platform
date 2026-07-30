@@ -135,14 +135,14 @@ export class ComsolLocator {
 
     if (process.platform === 'win32') {
       const programFiles = process.env['ProgramFiles'] || 'C:\\Program Files';
-      const versions = ['62', '61', '60', '56', '55'];
+      const versions = ['64', '63', '62', '61', '60', '56', '55'];
       for (const ver of versions) {
         paths.push(path.join(programFiles, 'COMSOL', `COMSOL${ver}`, 'Multiphysics', 'bin', 'win64', 'comsolbatch.exe'));
         paths.push(path.join(programFiles, 'COMSOL', `COMSOL${ver}`, 'Multiphysics', 'bin', 'win64', 'comsol.exe'));
       }
       paths.push('C:\\COMSOL\\Multiphysics\\bin\\win64\\comsolbatch.exe');
     } else if (process.platform === 'darwin') {
-      const versions = ['62', '61', '60', '56'];
+      const versions = ['64', '63', '62', '61', '60', '56'];
       for (const ver of versions) {
         paths.push(`/Applications/COMSOL${ver}/Multiphysics/bin/comsolbatch`);
         paths.push(`/Applications/COMSOL${ver}/bin/comsolbatch`);
@@ -150,7 +150,7 @@ export class ComsolLocator {
       paths.push('/Applications/COMSOL/bin/comsolbatch');
     } else {
       // Linux
-      const versions = ['62', '61', '60', '56'];
+      const versions = ['64', '63', '62', '61', '60', '56'];
       for (const ver of versions) {
         paths.push(`/usr/local/comsol${ver}/multiphysics/bin/comsolbatch`);
         paths.push(`/opt/comsol${ver}/multiphysics/bin/comsolbatch`);
