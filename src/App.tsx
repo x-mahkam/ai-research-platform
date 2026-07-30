@@ -193,7 +193,7 @@ export default function App() {
     }
   };
 
-  // Handler: Generate Report with Gemini API (ARP-010)
+  // Handler: Generate Report with Claude API (ARP-010)
   const handleGenerateReport = async (exp: Experiment) => {
     try {
       const newReport = await apiClient.generateReport(exp, activeProject?.title || 'ARP Project');

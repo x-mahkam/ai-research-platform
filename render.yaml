@@ -11,7 +11,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: GEMINI_API_KEY
+      - key: ANTHROPIC_API_KEY
         sync: false
       # Render's free tier has an ephemeral disk, so a local SQLite file is wiped
       # on every deploy. Set these to a libSQL/Turso database (in the dashboard)

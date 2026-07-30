@@ -76,7 +76,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
         id: `ai-${Date.now()}`,
         sender: 'assistant',
         text: data.text || 'Analysis completed.',
-        reasoning: data.reasoning || 'Evaluated via Gemini AI Research Engine.',
+        reasoning: data.reasoning || 'Evaluated via Claude AI Research Engine.',
         suggestedParameters: data.suggestedParameters,
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -108,7 +108,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
             <h1 className="text-xl font-bold text-white tracking-tight">AI Scientist Chat Assistant (ARP-010)</h1>
           </div>
           <p className="text-xs text-slate-300">
-            Powered by Gemini AI. Context-aware scientific analysis of TCAD simulation parameters, physical transport models, and device metrics.
+            Powered by Claude AI. Context-aware scientific analysis of TCAD simulation parameters, physical transport models, and device metrics.
           </p>
         </div>
 
