@@ -3,11 +3,10 @@ export interface AppConfig {
   port: number;
   serviceName: string;
   version: string;
-  gemini: {
+  anthropic: {
     apiKey?: string;
     modelName: string;
-    userAgent: string;
-    temperature: number;
+    maxTokens: number;
   };
   simulation: {
     defaultHostMachine: string;
@@ -21,14 +20,14 @@ export const config: AppConfig = {
   port: Number(process.env.PORT) || 3000,
   serviceName: 'AI Research Platform (ARP)',
   version: '0.1.0',
-  gemini: {
-    apiKey: process.env.GEMINI_API_KEY,
-    // 'gemini-3.6-flash' is not a real model — it made every AI call 404 and
-    // silently fall back to a canned template. Default to a current model and
-    // allow an override via GEMINI_MODEL.
-    modelName: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    userAgent: 'aistudio-build',
-    temperature: 0.2,
+  anthropic: {
+    // Reads ANTHROPIC_API_KEY from the environment. Without it, the AI features
+    // return a clearly-labeled built-in fallback (not real AI output).
+    apiKey: process.env.ANTHROPIC_API_KEY,
+    // Default to Claude Opus — the most capable model, well suited to the
+    // physics/scientific reasoning this platform does. Override via ANTHROPIC_MODEL.
+    modelName: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
+    maxTokens: Number(process.env.ANTHROPIC_MAX_TOKENS) || 16000,
   },
   simulation: {
     defaultHostMachine: 'node-compute-02.arp.local',

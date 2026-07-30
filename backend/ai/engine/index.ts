@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../configuration/index.js';
 import { LoggerService } from '../../logging/logger.js';
 import { SYSTEM_PROMPT_CORE } from '../prompts/index.js';
@@ -34,19 +34,12 @@ export interface AIEngineResponsePayload {
 }
 
 export class AIEngineOrchestrator {
-  private getClient(): GoogleGenAI | null {
-    if (!config.gemini.apiKey) {
-      logger.warn('GEMINI_API_KEY is not set. Physics AI Research Fallback active.');
+  private getClient(): Anthropic | null {
+    if (!config.anthropic.apiKey) {
+      logger.warn('ANTHROPIC_API_KEY is not set. Physics AI Research Fallback active.');
       return null;
     }
-    return new GoogleGenAI({
-      apiKey: config.gemini.apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': config.gemini.userAgent,
-        },
-      },
-    });
+    return new Anthropic({ apiKey: config.anthropic.apiKey });
   }
 
   public async processRequest(payload: AIEngineRequestPayload): Promise<AIEngineResponsePayload> {
@@ -86,7 +79,7 @@ export class AIEngineOrchestrator {
       suggestedParameters = { ...suggestedParameters, ...optRes.prediction.suggestedNextStep };
     }
 
-    // 4. Generate response via Gemini API or Physics Engine fallback
+    // 4. Generate response via Claude (Anthropic) API or Physics Engine fallback
     const aiClient = this.getClient();
     let textResponse = '';
 
@@ -104,18 +97,25 @@ Active AI Sub-Agent Results:
 
 Provide a rigorous, formatted Markdown response explaining the physics, recommending parameters, and summarizing actionable insights.`;
 
-        const response = await aiClient.models.generateContent({
-          model: config.gemini.modelName,
-          contents,
-          config: {
-            systemInstruction: SYSTEM_PROMPT_CORE,
-            temperature: config.gemini.temperature,
-          },
+        // Stream the response — scientific analyses can be long, and streaming
+        // avoids request timeouts on high max_tokens. .finalMessage() collects
+        // the complete message once the stream ends.
+        const stream = aiClient.messages.stream({
+          model: config.anthropic.modelName,
+          max_tokens: config.anthropic.maxTokens,
+          system: SYSTEM_PROMPT_CORE,
+          messages: [{ role: 'user', content: contents }],
         });
+        const response = await stream.finalMessage();
 
-        textResponse = response.text || 'Unable to generate analysis output from AI Engine.';
+        textResponse =
+          response.content
+            .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+            .map((block) => block.text)
+            .join('\n')
+            .trim() || 'Unable to generate analysis output from AI Engine.';
       } catch (err: any) {
-        logger.error('Error contacting Gemini API in AI Engine Orchestrator', { error: err.message });
+        logger.error('Error contacting Claude API in AI Engine Orchestrator', { error: err.message });
         textResponse = this.generatePhysicsFallbackResponse(
           prompt,
           context,
@@ -128,7 +128,7 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
         prompt,
         context,
         suggestedParameters,
-        'GEMINI_API_KEY is not set on the server.'
+        'ANTHROPIC_API_KEY is not set on the server.'
       );
     }
 
@@ -175,9 +175,9 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     return `> ⚠️ **AI language model is not active — this is a built-in fallback, not an AI-generated answer.**
 > Reason: ${reason || 'The AI model call did not succeed.'}
 >
-> To enable real AI analysis, set \`GEMINI_API_KEY\` in your \`.env\` (get a free key at
-> https://aistudio.google.com/apikey). You can also pin a model with \`GEMINI_MODEL\`
-> (default: \`gemini-2.5-flash\`). Then restart the server.
+> To enable real AI analysis, set \`ANTHROPIC_API_KEY\` in your \`.env\` (get a key at
+> https://console.anthropic.com/settings/keys). You can also pin a model with
+> \`ANTHROPIC_MODEL\` (default: \`claude-opus-5\`). Then restart the server.
 
 ---
 
