@@ -26,10 +26,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
+      # Use `npm install`, not `npm ci`: the committed lockfile is generated on
+      # Linux, and `npm ci` skips platform-specific optional deps on Windows
+      # (npm bug #4828) — which drops @rollup/rollup-win32-x64-msvc (Vite build)
+      # and the native @libsql Windows binary.
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build (client + server bundle)
         run: npm run build
@@ -48,8 +52,9 @@ jobs:
           Copy-Item packaging/windows/Start-ARP.bat "$pkg/Start-ARP.bat"
           Copy-Item packaging/windows/README-INSTALL.txt "$pkg/README-INSTALL.txt"
 
-          # Production-only dependencies (includes the Windows native @libsql binary)
-          npm ci --omit=dev --prefix $pkg
+          # Production-only dependencies (includes the Windows native @libsql binary).
+          # `npm install` (not ci) so Windows optional deps resolve — see note above.
+          npm install --omit=dev --no-audit --no-fund --prefix $pkg
 
           # Bundle the runner's Node so users need nothing pre-installed.
           New-Item -ItemType Directory -Force -Path "$pkg/node" | Out-Null
