@@ -130,6 +130,19 @@ const en: Dict = {
   'modal.providerNoKey': 'Set {key} in .env to enable this provider',
   'modal.runExperiment': 'Run Experiment',
 
+  // AI chat assistant
+  'chat.title': 'AI Scientist Chat Assistant',
+  'chat.subtitle':
+    "Powered by Claude AI. Context-aware analysis of your simulation's physics, parameters, and results — for COMSOL, TCAD, and any other solver.",
+  'chat.context': 'Context',
+  'chat.welcome':
+    'Hi! I\'m your AI Scientist Assistant, monitoring experiment "{title}". Ask me about the physics, parameters, or results of this model.',
+  'chat.physicsFallback': 'simulation',
+  'chat.preset.physics': 'Explain the governing physics and equations in this {physics} model.',
+  'chat.preset.params': 'Which input parameters most affect the results, and what ranges should I sweep?',
+  'chat.preset.results': 'Analyze the latest results — highlight key trends and any anomalies.',
+  'chat.preset.next': 'Summarize this simulation setup and recommend the next experiment.',
+
   // API keys settings
   'keys.title': 'AI API Keys',
   'keys.desc': 'Enter an API key to enable a provider. Keys are saved on this computer (.env) and take effect immediately — no restart, no file editing.',
@@ -272,6 +285,19 @@ const uz: Dict = {
   'modal.noKey': 'kalit yo‘q',
   'modal.providerNoKey': 'Bu provayderni yoqish uchun .env‘da {key} ni o‘rnating',
   'modal.runExperiment': 'Eksperimentni ishga tushirish',
+
+  // AI chat assistant
+  'chat.title': 'AI Olim Chat Yordamchisi',
+  'chat.subtitle':
+    'Claude AI asosida. Simulyatsiyangizning fizikasi, parametrlari va natijalarini kontekstga qarab tahlil qiladi — COMSOL, TCAD va boshqa yechuvchilar uchun.',
+  'chat.context': 'Kontekst',
+  'chat.welcome':
+    'Salom! Men AI Olim yordamchingizman, "{title}" eksperimentini kuzatyapman. Bu model fizikasi, parametrlari yoki natijalari haqida so‘rang.',
+  'chat.physicsFallback': 'simulyatsiya',
+  'chat.preset.physics': 'Bu {physics} modelidagi asosiy fizika va tenglamalarni tushuntir.',
+  'chat.preset.params': 'Qaysi kirish parametrlari natijaga eng ko‘p ta’sir qiladi va qanday oraliqda o‘zgartiray?',
+  'chat.preset.results': 'So‘nggi natijalarni tahlil qil — asosiy tendensiyalar va anomaliyalarni ko‘rsat.',
+  'chat.preset.next': 'Bu simulyatsiya sozlamasini jamla va keyingi eksperimentni tavsiya qil.',
 
   // API keys settings
   'keys.title': 'AI API kalitlari',

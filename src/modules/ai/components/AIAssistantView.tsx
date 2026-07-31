@@ -11,6 +11,7 @@ import {
   Brain,
   Lightbulb,
 } from 'lucide-react';
+import { useI18n } from '../../../i18n';
 
 interface AIAssistantViewProps {
   experiment: Experiment;
@@ -21,12 +22,17 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   experiment,
   onApplySuggestedParameters,
 }) => {
+  const { t } = useI18n();
+
+  // Adapt prompts to the actual model, not a fixed transistor/TCAD domain —
+  // the solver (e.g. COMSOL) can model any physics: heat, fluids, EM, structural…
+  const physics = experiment.physicsModule || experiment.simulator || t('chat.physicsFallback');
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-1',
       sender: 'assistant',
-      text: `Hello! I am your **AI Scientist Assistant** for Sentaurus TCAD and multi-physics research. I am currently monitoring experiment **"${experiment.title}"**. How can I assist with parameter optimization or device physics analysis today?`,
-      reasoning: 'Loaded TCAD domain knowledge model for semiconductor FET transport physics.',
+      text: t('chat.welcome', { title: experiment.title }),
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
@@ -35,10 +41,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   const promptPresets = [
-    'Analyze subthreshold swing (SS) and DIBL for this nanosheet device.',
-    'Recommend gate workfunction & EOT to achieve target Vt = 0.30V.',
-    'Explain the physics of velocity overshoot in hydrodynamic transport.',
-    'How does reducing nanosheet thickness from 5nm to 3nm affect electron confinement?',
+    t('chat.preset.physics', { physics }),
+    t('chat.preset.params'),
+    t('chat.preset.results'),
+    t('chat.preset.next'),
   ];
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -107,15 +113,15 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
-            <h1 className="text-xl font-bold text-white tracking-tight">AI Scientist Chat Assistant (ARP-010)</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">{t('chat.title')}</h1>
           </div>
           <p className="text-xs text-slate-300">
-            Powered by Claude AI. Context-aware scientific analysis of TCAD simulation parameters, physical transport models, and device metrics.
+            {t('chat.subtitle')}
           </p>
         </div>
 
         <div className="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono text-cyan-300 shrink-0">
-          Context: {experiment.title}
+          {t('chat.context')}: {experiment.title}
         </div>
       </div>
 
