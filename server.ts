@@ -1,6 +1,6 @@
 // Load .env before anything reads process.env (e.g. COMSOL_EXECUTABLE,
-// DATABASE_URL, ANTHROPIC_API_KEY, PORT).
-import 'dotenv/config';
+// DATABASE_URL, GEMINI_API_KEY, PORT). This import MUST come first.
+import { envInfo } from './backend/env.js';
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -20,6 +20,11 @@ process.on('uncaughtException', (err) => {
 
 async function startServer() {
   logger.info(`[Startup] Booting ${config.serviceName} v${config.version} (NODE_ENV=${process.env.NODE_ENV || 'development'})`);
+  logger.info(
+    envInfo.exists
+      ? `[Startup] Config file in effect: ${envInfo.path}`
+      : `[Startup] No .env found at ${envInfo.path} — using only ambient environment variables.`
+  );
 
   logger.info('[Startup] Initializing application container (database, migrations, plugins)...');
   const app = await createApiApp();
