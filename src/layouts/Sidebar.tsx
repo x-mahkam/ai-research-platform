@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ChevronRight,
 } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 export type ActiveTab =
   | 'ai_assistant'
@@ -39,15 +40,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeExperimentTitle,
   queueCount,
 }) => {
+  const { t } = useI18n();
   const navItems = [
-    { id: 'ai_assistant', label: 'AI Scientist Agent', icon: Sparkles, highlight: true },
-    { id: 'dashboard', label: 'Research Dashboard', icon: LayoutDashboard },
-    { id: 'experiments', label: 'Active Experiments', icon: FlaskConical },
-    { id: 'queue', label: 'Simulation Orchestrator', icon: ListTodo, badge: queueCount > 0 ? queueCount : undefined },
-    { id: 'plugins', label: 'Simulator Plugins', icon: Blocks },
-    { id: 'optimization', label: 'Optimization Engine', icon: Sliders },
-    { id: 'visualization', label: 'Scientific Visualizer', icon: LineChart },
-    { id: 'reports', label: 'Publication Reports', icon: FileText },
+    { id: 'ai_assistant', label: t('nav.ai'), icon: Sparkles, highlight: true },
+    { id: 'dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'experiments', label: t('nav.experiments'), icon: FlaskConical },
+    { id: 'queue', label: t('nav.queue'), icon: ListTodo, badge: queueCount > 0 ? queueCount : undefined },
+    { id: 'plugins', label: t('nav.plugins'), icon: Blocks },
+    { id: 'optimization', label: t('nav.optimization'), icon: Sliders },
+    { id: 'visualization', label: t('nav.visualization'), icon: LineChart },
+    { id: 'reports', label: t('nav.reports'), icon: FileText },
   ];
 
   return (
@@ -56,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Section */}
         <div>
           <div className="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Research Modules
+            {t('nav.modules')}
           </div>
           <nav className="space-y-1">
             {navItems.map((item) => {
@@ -91,15 +93,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Current Context Card */}
         <div className="bg-slate-800/60 rounded-lg p-3 border border-slate-800 space-y-2">
-          <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">Active Workspace</div>
+          <div className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider">{t('workspace.title')}</div>
           <div className="space-y-1 text-xs">
             <div className="truncate font-medium text-slate-200">
               <span className="text-cyan-400 font-mono text-[10px] mr-1">PROJ:</span>
-              {activeProjectTitle || 'No project selected'}
+              {activeProjectTitle || t('workspace.noProject')}
             </div>
             <div className="truncate text-slate-400 text-[11px]">
               <span className="text-blue-400 font-mono text-[10px] mr-1">EXP:</span>
-              {activeExperimentTitle || 'No experiment'}
+              {activeExperimentTitle || t('workspace.noExperiment')}
             </div>
           </div>
         </div>
