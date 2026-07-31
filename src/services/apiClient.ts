@@ -152,6 +152,20 @@ export class ApiClient {
     return res.json();
   }
 
+  public async planExperimentSetup(input: {
+    objective: string;
+    simulator?: string;
+    providers?: string[];
+  }): Promise<import('../types').ExperimentSetupProposal> {
+    const res = await fetch('/api/ai/plan-setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error('Failed to generate AI experiment setup');
+    return res.json();
+  }
+
   public async getAIProviders(): Promise<{
     providers: { id: string; label: string; model: string; configured: boolean }[];
     default?: string;

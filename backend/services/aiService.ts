@@ -22,6 +22,10 @@ export class AIService {
     return saved;
   }
 
+  public async planSetup(input: { objective: string; simulator?: string; providers?: string[] }) {
+    return this.engine.generateExperimentSetup(input);
+  }
+
   public async planExperiment(goal: string, context?: any) {
     return agentManager.runPlannerAgent(goal, context);
   }

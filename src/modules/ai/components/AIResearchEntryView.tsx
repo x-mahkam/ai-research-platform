@@ -18,7 +18,7 @@ import {
   ChevronRight,
   ShieldCheck,
 } from 'lucide-react';
-import { Project, Experiment, SimulatorPlugin } from '../../../types';
+import { Project, Experiment, SimulatorPlugin, ExperimentSetupProposal, ProposedParameter } from '../../../types';
 import { apiClient } from '../../../services/apiClient';
 import { useI18n } from '../../../i18n';
 
@@ -63,6 +63,12 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [uploadedFileContent, setUploadedFileContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('default');
+
+  // AI setup / confirm state
+  const [setupProposal, setSetupProposal] = useState<ExperimentSetupProposal | null>(null);
+  const [editedParams, setEditedParams] = useState<ProposedParameter[]>([]);
+  const [isPlanningSetup, setIsPlanningSetup] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const presetObjectives = [
     {
@@ -158,6 +164,44 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
     }
   };
 
+  // Step 3 → 4: ask the AI to design a concrete, editable experiment setup.
+  const handleGoToSetup = async () => {
+    if (!analyzedData) return;
+    setStep('confirm');
+    setIsPlanningSetup(true);
+    setSetupError(null);
+    setSetupProposal(null);
+    try {
+      const proposal = await apiClient.planExperimentSetup({
+        objective,
+        simulator: analyzedData.recommendedSimulator.name,
+      });
+      setSetupProposal(proposal);
+      setEditedParams(proposal.parameters);
+    } catch (err) {
+      setSetupError(err instanceof Error ? err.message : 'AI setup failed.');
+    } finally {
+      setIsPlanningSetup(false);
+    }
+  };
+
+  const updateParam = (index: number, field: keyof ProposedParameter, value: string) => {
+    setEditedParams((prev) =>
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        if (field === 'min' || field === 'max') {
+          const num = parseFloat(value);
+          return { ...p, [field]: Number.isNaN(num) ? undefined : num };
+        }
+        if (field === 'baseline') {
+          const num = parseFloat(value);
+          return { ...p, baseline: value !== '' && !Number.isNaN(num) ? num : value };
+        }
+        return { ...p, [field]: value };
+      })
+    );
+  };
+
   const handleFinalLaunch = () => {
     if (!analyzedData) return;
 
@@ -187,7 +231,12 @@ File {
     const format = finalFileName.split('.').pop() || 'cmd';
 
     const params: Record<string, number | string> = {};
-    if (analyzedData.suggestedParameters) {
+    if (editedParams.length > 0) {
+      // Use the AI setup the user reviewed/edited.
+      editedParams.forEach((p) => {
+        params[p.key] = p.baseline;
+      });
+    } else if (analyzedData.suggestedParameters) {
       Object.entries(analyzedData.suggestedParameters).forEach(([key, val]) => {
         params[key] = (val as { value: number | string }).value;
       });
@@ -491,15 +540,165 @@ File {
               <div className="pt-2 flex justify-end">
                 <button
                   id="launch-research-btn"
-                  onClick={handleFinalLaunch}
+                  onClick={handleGoToSetup}
                   className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-6 py-3 rounded-xl flex items-center space-x-2 shadow-xl cursor-pointer transition transform active:scale-95"
                 >
-                  <Play className="w-4 h-4 fill-white" />
-                  <span>{t('entry.launch')}</span>
+                  <Sparkles className="w-4 h-4" />
+                  <span>{t('entry.configureBtn')}</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Step 4: AI-designed experiment setup — review, edit, confirm */}
+      {step === 'confirm' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-cyan-500/20 text-cyan-400 rounded-lg border border-cyan-500/30">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white">{t('setup.title')}</h3>
+            </div>
+            {setupProposal && (
+              <span
+                className={`px-2.5 py-1 rounded text-[10px] font-mono border ${
+                  setupProposal.isAi
+                    ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                    : 'bg-amber-950/60 text-amber-300 border-amber-800'
+                }`}
+              >
+                {setupProposal.isAi
+                  ? t('setup.byAi', { provider: setupProposal.provider })
+                  : t('setup.fallbackBadge')}
+              </span>
+            )}
+          </div>
+
+          {isPlanningSetup && (
+            <div className="py-8 text-center space-y-3">
+              <RefreshCw className="w-7 h-7 animate-spin text-cyan-400 mx-auto" />
+              <p className="text-xs text-slate-400">{t('setup.planning')}</p>
+            </div>
+          )}
+
+          {!isPlanningSetup && setupError && (
+            <div className="space-y-3">
+              <div className="p-3 bg-red-950/50 border border-red-800/60 rounded-xl text-red-300 text-xs">
+                {setupError}
+              </div>
+              <button
+                onClick={handleGoToSetup}
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer flex items-center space-x-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{t('setup.retry')}</span>
+              </button>
+            </div>
+          )}
+
+          {!isPlanningSetup && setupProposal && (
+            <div className="space-y-5">
+              <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 border border-slate-800 p-3.5 rounded-xl">
+                {setupProposal.summary}
+              </p>
+
+              {/* Editable parameter table */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                  {t('setup.parameters')}
+                </span>
+                <div className="overflow-x-auto rounded-xl border border-slate-800">
+                  <table className="w-full text-[11px] text-left">
+                    <thead className="bg-slate-950 text-slate-400">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">{t('setup.param')}</th>
+                        <th className="px-3 py-2 font-medium">{t('setup.baseline')}</th>
+                        <th className="px-3 py-2 font-medium">{t('setup.min')}</th>
+                        <th className="px-3 py-2 font-medium">{t('setup.max')}</th>
+                        <th className="px-3 py-2 font-medium">{t('setup.unit')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {editedParams.map((p, i) => (
+                        <tr key={`${p.key}-${i}`} className="bg-slate-900">
+                          <td className="px-3 py-2 align-top">
+                            <div className="font-semibold text-slate-200">{p.name}</div>
+                            {p.rationale && <div className="text-[10px] text-slate-500 max-w-[220px]">{p.rationale}</div>}
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={String(p.baseline)}
+                              onChange={(e) => updateParam(i, 'baseline', e.target.value)}
+                              className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={p.min ?? ''}
+                              onChange={(e) => updateParam(i, 'min', e.target.value)}
+                              className="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={p.max ?? ''}
+                              onChange={(e) => updateParam(i, 'max', e.target.value)}
+                              className="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-slate-400 font-mono">{p.unit || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Metrics / method / runs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('setup.targetMetrics')}</span>
+                  <span className="text-slate-200 font-medium">{setupProposal.targetMetrics.join(', ') || '—'}</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('setup.method')}</span>
+                  <span className="text-slate-200 font-medium">{setupProposal.method}</span>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('setup.estimatedRuns')}</span>
+                  <span className="text-slate-200 font-medium">{setupProposal.estimatedRuns}</span>
+                </div>
+              </div>
+
+              {setupProposal.notes && (
+                <div className="text-[11px] text-slate-400 bg-slate-950 border border-slate-800 rounded-xl p-3">
+                  <span className="font-semibold text-slate-300">{t('setup.notes')}: </span>
+                  {setupProposal.notes}
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2 border-t border-slate-800">
+                <button
+                  onClick={() => setStep('model_select')}
+                  className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-lg cursor-pointer flex items-center space-x-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t('setup.back')}</span>
+                </button>
+                <button
+                  onClick={handleFinalLaunch}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-6 py-2.5 rounded-lg flex items-center space-x-2 shadow-xl cursor-pointer transition transform active:scale-95"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span>{t('setup.confirmRun')}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

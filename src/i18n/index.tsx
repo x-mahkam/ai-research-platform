@@ -74,6 +74,26 @@ const en: Dict = {
   'entry.loaded': 'Loaded: {name}',
   'entry.ready': 'Ready',
   'entry.launch': 'Launch Autonomous Scientific Research',
+  'entry.configureBtn': 'Configure with AI',
+
+  // AI setup / confirm step
+  'setup.title': 'AI Experiment Setup',
+  'setup.planning': 'The AI is designing your experiment setup…',
+  'setup.byAi': 'Proposed by {provider}',
+  'setup.fallbackBadge': 'Rule-based (AI not active)',
+  'setup.parameters': 'Parameters to vary',
+  'setup.param': 'Parameter',
+  'setup.baseline': 'Baseline',
+  'setup.min': 'Min',
+  'setup.max': 'Max',
+  'setup.unit': 'Unit',
+  'setup.targetMetrics': 'Target metrics',
+  'setup.method': 'Method',
+  'setup.estimatedRuns': 'Estimated runs',
+  'setup.notes': 'Notes',
+  'setup.back': 'Back',
+  'setup.confirmRun': 'Confirm & Run',
+  'setup.retry': 'Retry',
 
   // New experiment modal
   'modal.title': 'Execute Model Experiment',
@@ -180,6 +200,26 @@ const uz: Dict = {
   'entry.loaded': 'Yuklandi: {name}',
   'entry.ready': 'Tayyor',
   'entry.launch': 'Avtonom ilmiy tadqiqotni boshlash',
+  'entry.configureBtn': 'AI bilan sozlash',
+
+  // AI setup / confirm step
+  'setup.title': 'AI eksperiment sozlamasi',
+  'setup.planning': 'AI eksperiment sozlamangizni loyihalamoqda…',
+  'setup.byAi': '{provider} tomonidan taklif qilindi',
+  'setup.fallbackBadge': 'Qoidaga asoslangan (AI faol emas)',
+  'setup.parameters': 'O‘zgartiriladigan parametrlar',
+  'setup.param': 'Parametr',
+  'setup.baseline': 'Boshlang‘ich',
+  'setup.min': 'Min',
+  'setup.max': 'Maks',
+  'setup.unit': 'Birlik',
+  'setup.targetMetrics': 'Maqsadli ko‘rsatkichlar',
+  'setup.method': 'Usul',
+  'setup.estimatedRuns': 'Taxminiy ishga tushirishlar',
+  'setup.notes': 'Eslatmalar',
+  'setup.back': 'Orqaga',
+  'setup.confirmRun': 'Tasdiqlash va ishga tushirish',
+  'setup.retry': 'Qayta urinish',
 
   // New experiment modal
   'modal.title': 'Model eksperimentini bajarish',
