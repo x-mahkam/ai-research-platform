@@ -55,6 +55,13 @@ export class AIContextAggregator {
         const res = resultManager.getResultsByJob(jobId);
         if (res) {
           payload.unifiedResults = res;
+          // Surface the solver log tail explicitly so the model reads the
+          // actual run output, not only the flattened metrics.
+          const diag = (res as { diagnostics?: Record<string, unknown> }).diagnostics;
+          const solverLog = diag?.solverLog;
+          if (typeof solverLog === 'string' && solverLog.trim()) {
+            payload.rawLogsSnippet = solverLog.split(/\r?\n/).slice(-120);
+          }
         }
       } catch {
         // ignore

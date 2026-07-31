@@ -41,6 +41,7 @@ export class UniversalARPConverter implements IResultConverter {
       metrics: parsed.metrics,
       curves,
       summary,
+      diagnostics: parsed.diagnostics,
     };
   }
 }

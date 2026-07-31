@@ -12,6 +12,7 @@ import {
   TimeoutError,
 } from './errors.js';
 import { workspaceManager } from '../workspace/manager/index.js';
+import { extractFromLog, collectExportedTables } from './ComsolResultExtractor.js';
 import { LoggerService } from '../logging/logger.js';
 
 const logger = new LoggerService('ComsolRunner');
@@ -152,7 +153,13 @@ export class ComsolRunner {
 
     logger.info(`COMSOL execution completed successfully. Output model verified at "${outputModelPath}".`);
 
-    // 8. Construct & Return SimulationResult (ONLY file locations, execution metadata, execution status)
+    // 8. Extract solver data from the batch log so the AI layer receives the
+    //    actual computed physics — convergence, DOF, solution time, computed
+    //    values, warnings — instead of just file locations.
+    const extracted = extractFromLog(stdout, stderr);
+    const exportedTables = collectExportedTables(workspacePath);
+
+    // 9. Construct & Return SimulationResult (file locations + parsed solver data)
     const result: SimulationResult = {
       status: 'COMPLETED',
       executionTimeMs,
@@ -169,6 +176,16 @@ export class ComsolRunner {
         environment: job.options.env || {},
         commandLine: [executablePath, ...batchArgs],
       },
+      metrics: {
+        'Execution time (ms)': executionTimeMs,
+        ...extracted.metrics,
+      },
+      computedValues: extracted.computedValues,
+      warnings: extracted.warnings,
+      errors: extracted.errors,
+      converged: extracted.converged,
+      solverLog: extracted.logTail,
+      exportedTables,
     };
 
     return result;
