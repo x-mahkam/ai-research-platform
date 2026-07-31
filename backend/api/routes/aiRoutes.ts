@@ -9,5 +9,6 @@ router.post('/ai/plan', aiController.planExperiment);
 router.post('/ai/analyze', aiController.analyzeResults);
 router.post('/ai/optimize', aiController.predictOptimization);
 router.get('/ai/knowledge', aiController.queryKnowledge);
+router.get('/ai/providers', aiController.listProviders);
 
 export default router;

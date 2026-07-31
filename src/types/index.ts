@@ -131,6 +131,11 @@ export interface Experiment {
   physicsModule?: string;
   researchGoal?: string;
   workspacePath?: string;
+
+  // AI provider(s) pinned to this experiment. One id → single model; several →
+  // ensemble (all queried, answers combined). Chosen at creation, kept for the
+  // life of the experiment.
+  aiProviders?: string[];
 }
 
 export interface SimulationJob {

@@ -4,6 +4,8 @@ export interface AIChatDTO {
   prompt: string;
   experimentContext?: Record<string, unknown>;
   history?: unknown[];
+  /** AI provider id(s) to use for this request. More than one → ensemble. */
+  providers?: string[];
 }
 
 export interface AIReportDTO {
@@ -19,6 +21,9 @@ export function validateAIChatDTO(data: any): AIChatDTO {
     prompt: data.prompt,
     experimentContext: data.experimentContext,
     history: data.history,
+    providers: Array.isArray(data.providers)
+      ? data.providers.filter((id: unknown): id is string => typeof id === 'string')
+      : undefined,
   };
 }
 

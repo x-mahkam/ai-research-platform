@@ -9,6 +9,7 @@ export interface AIChatInput {
   experimentId?: string;
   jobId?: string;
   targetMetric?: string;
+  providers?: string[];
 }
 
 export interface AIChatResult {
@@ -36,6 +37,7 @@ export class AIEngine {
       experimentId: input.experimentId || (input.experimentContext?.id as string),
       jobId: input.jobId,
       targetMetric: input.targetMetric,
+      providers: input.providers || (input.experimentContext?.aiProviders as string[] | undefined),
     });
 
     return {

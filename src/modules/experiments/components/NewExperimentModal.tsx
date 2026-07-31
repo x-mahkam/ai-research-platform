@@ -45,6 +45,35 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [modelPath, setModelPath] = useState<string>('');
 
+  // AI provider selection (only providers with a configured key are shown).
+  const [aiProviders, setAiProviders] = useState<
+    { id: string; label: string; model: string; configured: boolean }[]
+  >([]);
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    apiClient
+      .getAIProviders()
+      .then((data) => {
+        const configured = data.providers.filter((p) => p.configured);
+        setAiProviders(configured);
+        // Preselect the default provider (or the first configured one).
+        const preset = configured.find((p) => p.id === data.default) || configured[0];
+        setSelectedProviders(preset ? [preset.id] : []);
+      })
+      .catch(() => {
+        setAiProviders([]);
+        setSelectedProviders([]);
+      });
+  }, [isOpen]);
+
+  const toggleProvider = (id: string) => {
+    setSelectedProviders((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
+
   // Load models whenever target project changes
   useEffect(() => {
     if (!isOpen || !projectId) return;
@@ -210,6 +239,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
       parameters: defaultParameters,
       tags: tags.length > 0 ? tags : [selectedModel.simulator, selectedModel.physicsModule],
       createdBy: 'Dr. Jasur Alimov',
+      aiProviders: selectedProviders.length > 0 ? selectedProviders : undefined,
     });
 
     onClose();
@@ -416,6 +446,51 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               onChange={(e) => setTagsInput(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
             />
+          </div>
+
+          {/* AI Engine selection — pin one or more configured providers */}
+          <div>
+            <label className="block text-slate-300 font-medium mb-1 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>AI Engine for this experiment</span>
+            </label>
+            {aiProviders.length === 0 ? (
+              <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-[11px] text-slate-400">
+                No AI provider is configured. Set an API key (e.g. <span className="font-mono text-cyan-300">GEMINI_API_KEY</span>)
+                in your <span className="font-mono">.env</span> to enable AI analysis. The experiment still runs without it.
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {aiProviders.map((p) => {
+                    const on = selectedProviders.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => toggleProvider(p.id)}
+                        className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-left transition cursor-pointer ${
+                          on
+                            ? 'border-cyan-500 bg-cyan-950/40 text-cyan-200'
+                            : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-[11px] font-semibold truncate">{p.label}</span>
+                          <span className="block text-[10px] font-mono text-slate-500 truncate">{p.model}</span>
+                        </span>
+                        {on && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  {selectedProviders.length > 1
+                    ? `Ensemble mode: all ${selectedProviders.length} models answer, then results are combined.`
+                    : 'Pick one, or select several to compare their answers and get a combined conclusion.'}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Submit Actions */}
