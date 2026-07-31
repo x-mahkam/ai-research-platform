@@ -175,6 +175,22 @@ export class ApiClient {
     return res.json();
   }
 
+  public async saveAIKeys(keys: Record<string, string>): Promise<{
+    providers: { id: string; label: string; model: string; configured: boolean }[];
+    default?: string;
+  }> {
+    const res = await fetch('/api/ai/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(keys),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to save API keys');
+    }
+    return res.json();
+  }
+
   public async planResearch(goal: string): Promise<{
     planId: string;
     recommendedPlugin: string;

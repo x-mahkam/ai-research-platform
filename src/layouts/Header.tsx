@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Project, Experiment } from '../types';
 import {
   Cpu,
@@ -12,8 +12,10 @@ import {
   CheckCircle2,
   Clock,
   Languages,
+  KeyRound,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { ApiKeysModal } from '../modules/settings/components/ApiKeysModal';
 
 interface HeaderProps {
   projects: Project[];
@@ -39,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
   runningJobCount,
 }) => {
   const { t, lang, setLang } = useI18n();
+  const [showKeys, setShowKeys] = useState(false);
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const filteredExperiments = experiments.filter((e) => e.projectId === activeProjectId);
   const activeExperiment = experiments.find((e) => e.id === activeExperimentId);
@@ -130,6 +133,17 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="font-medium">{t('header.aiActive')}</span>
         </div>
 
+        {/* AI API keys */}
+        <button
+          id="btn-header-keys"
+          onClick={() => setShowKeys(true)}
+          title={t('keys.open')}
+          className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer"
+        >
+          <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden md:inline">{t('keys.open')}</span>
+        </button>
+
         {/* Language switcher (UZ / EN) */}
         <div id="header-lang-switch" className="flex items-center rounded-md border border-slate-700 overflow-hidden text-[11px] font-semibold" title={t('lang.label')}>
           <Languages className="w-3.5 h-3.5 text-slate-400 mx-1.5" />
@@ -166,6 +180,8 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{t('header.runSimulation')}</span>
         </button>
       </div>
+
+      <ApiKeysModal isOpen={showKeys} onClose={() => setShowKeys(false)} />
     </header>
   );
 };

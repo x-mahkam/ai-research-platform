@@ -11,5 +11,6 @@ router.post('/ai/analyze', aiController.analyzeResults);
 router.post('/ai/optimize', aiController.predictOptimization);
 router.get('/ai/knowledge', aiController.queryKnowledge);
 router.get('/ai/providers', aiController.listProviders);
+router.post('/ai/keys', aiController.saveKeys);
 
 export default router;

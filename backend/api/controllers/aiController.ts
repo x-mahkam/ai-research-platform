@@ -3,6 +3,7 @@ import { aiService, AIService } from '../../services/aiService.js';
 import { validateAIChatDTO, validateAIReportDTO } from '../dto/aiDTO.js';
 import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
 import { ValidationError } from '../../shared/errors.js';
+import { updateProviderKeys } from '../../settings/apiKeys.js';
 
 export class AIController {
   constructor(private service: AIService = aiService) {}
@@ -92,6 +93,27 @@ export class AIController {
 
   public listProviders = async (_req: Request, res: Response, next: NextFunction) => {
     try {
+      res.json(this.service.listProviders());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public saveKeys = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Writing API keys is a local convenience for the machine running the
+      // platform — never allow it from a remote client (e.g. a public deploy).
+      const remote = req.socket.remoteAddress || '';
+      const isLocal =
+        remote === '127.0.0.1' ||
+        remote === '::1' ||
+        remote === '::ffff:127.0.0.1' ||
+        req.hostname === 'localhost';
+      if (!isLocal) {
+        return res.status(403).json({ error: 'API keys can only be set from the local machine.' });
+      }
+      const keys = req.body && typeof req.body === 'object' ? (req.body as Record<string, string>) : {};
+      updateProviderKeys(keys);
       res.json(this.service.listProviders());
     } catch (err) {
       next(err);

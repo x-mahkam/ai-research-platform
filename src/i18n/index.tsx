@@ -130,8 +130,23 @@ const en: Dict = {
   'modal.providerNoKey': 'Set {key} in .env to enable this provider',
   'modal.runExperiment': 'Run Experiment',
 
+  // API keys settings
+  'keys.title': 'AI API Keys',
+  'keys.desc': 'Enter an API key to enable a provider. Keys are saved on this computer (.env) and take effect immediately — no restart, no file editing.',
+  'keys.configured': 'configured',
+  'keys.notSet': 'not set',
+  'keys.placeholder': 'Paste API key…',
+  'keys.placeholderSet': 'Configured — paste a new key to replace',
+  'keys.save': 'Save keys',
+  'keys.saving': 'Saving…',
+  'keys.saved': 'Saved. Providers updated.',
+  'keys.free': 'free',
+  'keys.getKey': 'Get key',
+  'keys.open': 'AI keys',
+
   // Common
   'common.cancel': 'Cancel',
+  'common.close': 'Close',
 };
 
 const uz: Dict = {
@@ -258,8 +273,23 @@ const uz: Dict = {
   'modal.providerNoKey': 'Bu provayderni yoqish uchun .env‘da {key} ni o‘rnating',
   'modal.runExperiment': 'Eksperimentni ishga tushirish',
 
+  // API keys settings
+  'keys.title': 'AI API kalitlari',
+  'keys.desc': 'Provayderni yoqish uchun API kalit kiriting. Kalitlar shu kompyuterda (.env) saqlanadi va darrov ishlaydi — restart ham, fayl tahrirlash ham shart emas.',
+  'keys.configured': 'sozlangan',
+  'keys.notSet': 'yo‘q',
+  'keys.placeholder': 'API kalitni joylashtiring…',
+  'keys.placeholderSet': 'Sozlangan — almashtirish uchun yangi kalit joylashtiring',
+  'keys.save': 'Kalitlarni saqlash',
+  'keys.saving': 'Saqlanmoqda…',
+  'keys.saved': 'Saqlandi. Provayderlar yangilandi.',
+  'keys.free': 'bepul',
+  'keys.getKey': 'Kalit olish',
+  'keys.open': 'AI kalitlari',
+
   // Common
   'common.cancel': 'Bekor qilish',
+  'common.close': 'Yopish',
 };
 
 const translations: Record<Lang, Dict> = { en, uz };
