@@ -3,10 +3,18 @@ export interface AppConfig {
   port: number;
   serviceName: string;
   version: string;
-  anthropic: {
-    apiKey?: string;
-    modelName: string;
+  ai: {
+    // Optional default provider id (AI_PROVIDER). When an experiment doesn't
+    // pin one, the platform uses this, or the first configured provider.
+    defaultProvider?: string;
     maxTokens: number;
+    providers: {
+      gemini: { apiKey?: string; model: string };
+      deepseek: { apiKey?: string; model: string };
+      openai: { apiKey?: string; model: string };
+      grok: { apiKey?: string; model: string };
+      claude: { apiKey?: string; model: string };
+    };
   };
   simulation: {
     defaultHostMachine: string;
@@ -20,14 +28,34 @@ export const config: AppConfig = {
   port: Number(process.env.PORT) || 3000,
   serviceName: 'AI Research Platform (ARP)',
   version: '0.1.0',
-  anthropic: {
-    // Reads ANTHROPIC_API_KEY from the environment. Without it, the AI features
+  ai: {
+    // Any subset of the five providers can be configured. A provider is only
+    // available when its API key is present; with none set, the AI features
     // return a clearly-labeled built-in fallback (not real AI output).
-    apiKey: process.env.ANTHROPIC_API_KEY,
-    // Default to Claude Opus — the most capable model, well suited to the
-    // physics/scientific reasoning this platform does. Override via ANTHROPIC_MODEL.
-    modelName: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
-    maxTokens: Number(process.env.ANTHROPIC_MAX_TOKENS) || 16000,
+    defaultProvider: process.env.AI_PROVIDER,
+    maxTokens: Number(process.env.AI_MAX_TOKENS || process.env.ANTHROPIC_MAX_TOKENS) || 16000,
+    providers: {
+      gemini: {
+        apiKey: process.env.GEMINI_API_KEY,
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      },
+      deepseek: {
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+      },
+      openai: {
+        apiKey: process.env.OPENAI_API_KEY,
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      },
+      grok: {
+        apiKey: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
+        model: process.env.GROK_MODEL || 'grok-2-latest',
+      },
+      claude: {
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        model: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
+      },
+    },
   },
   simulation: {
     defaultHostMachine: 'node-compute-02.arp.local',

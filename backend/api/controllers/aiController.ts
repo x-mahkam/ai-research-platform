@@ -71,6 +71,14 @@ export class AIController {
       next(err);
     }
   };
+
+  public listProviders = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(this.service.listProviders());
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 export const aiController = new AIController();

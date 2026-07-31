@@ -1,10 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../configuration/index.js';
 import { LoggerService } from '../../logging/logger.js';
 import { SYSTEM_PROMPT_CORE } from '../prompts/index.js';
 import { agentManager } from '../agents/index.js';
 import { aiMemoryStore } from '../memory/index.js';
 import { aiContextAggregator } from '../context/index.js';
+import { aiProviderRegistry } from '../providers/index.js';
+import { AIProvider } from '../providers/types.js';
 import { GeneratedReport } from '../../shared/types.js';
 
 export * from './AIResearchEngine.js';
@@ -21,6 +22,12 @@ export interface AIEngineRequestPayload {
   jobId?: string;
   targetMetric?: string;
   comparisonExperimentIds?: string[];
+  /**
+   * Which AI provider(s) to use for this request (e.g. ['gemini','claude']).
+   * Empty/omitted → the platform's default provider. More than one → the
+   * providers run in parallel and their answers are combined.
+   */
+  providers?: string[];
 }
 
 export interface AIEngineResponsePayload {
@@ -34,14 +41,6 @@ export interface AIEngineResponsePayload {
 }
 
 export class AIEngineOrchestrator {
-  private getClient(): Anthropic | null {
-    if (!config.anthropic.apiKey) {
-      logger.warn('ANTHROPIC_API_KEY is not set. Physics AI Research Fallback active.');
-      return null;
-    }
-    return new Anthropic({ apiKey: config.anthropic.apiKey });
-  }
-
   public async processRequest(payload: AIEngineRequestPayload): Promise<AIEngineResponsePayload> {
     const { prompt, sessionId = 'default-session', experimentId, jobId, targetMetric } = payload;
     logger.info(`AI Engine processing request in session ${sessionId} for prompt: "${prompt.slice(0, 50)}..."`);
@@ -79,13 +78,8 @@ export class AIEngineOrchestrator {
       suggestedParameters = { ...suggestedParameters, ...optRes.prediction.suggestedNextStep };
     }
 
-    // 4. Generate response via Claude (Anthropic) API or Physics Engine fallback
-    const aiClient = this.getClient();
-    let textResponse = '';
-
-    if (aiClient) {
-      try {
-        const contents = `User Request: ${prompt}
+    // 4. Generate response via the selected AI provider(s), or Physics fallback
+    const contents = `User Request: ${prompt}
 
 Context Aggregation:
 ${JSON.stringify(context, null, 2)}
@@ -97,39 +91,20 @@ Active AI Sub-Agent Results:
 
 Provide a rigorous, formatted Markdown response explaining the physics, recommending parameters, and summarizing actionable insights.`;
 
-        // Stream the response — scientific analyses can be long, and streaming
-        // avoids request timeouts on high max_tokens. .finalMessage() collects
-        // the complete message once the stream ends.
-        const stream = aiClient.messages.stream({
-          model: config.anthropic.modelName,
-          max_tokens: config.anthropic.maxTokens,
-          system: SYSTEM_PROMPT_CORE,
-          messages: [{ role: 'user', content: contents }],
-        });
-        const response = await stream.finalMessage();
+    const selected = aiProviderRegistry.resolveSelection(payload.providers);
+    let textResponse = '';
 
-        textResponse =
-          response.content
-            .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-            .map((block) => block.text)
-            .join('\n')
-            .trim() || 'Unable to generate analysis output from AI Engine.';
-      } catch (err: any) {
-        logger.error('Error contacting Claude API in AI Engine Orchestrator', { error: err.message });
-        textResponse = this.generatePhysicsFallbackResponse(
-          prompt,
-          context,
-          suggestedParameters,
-          `The AI model call failed: ${err.message}`
-        );
-      }
-    } else {
+    if (selected.length === 0) {
       textResponse = this.generatePhysicsFallbackResponse(
         prompt,
         context,
         suggestedParameters,
-        'ANTHROPIC_API_KEY is not set on the server.'
+        'No AI provider is configured on the server.'
       );
+    } else if (selected.length === 1) {
+      textResponse = await this.runSingleProvider(selected[0], contents, prompt, context, suggestedParameters);
+    } else {
+      textResponse = await this.runEnsemble(selected, contents, prompt, context, suggestedParameters);
     }
 
     // 5. Save in Memory
@@ -157,6 +132,132 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     return repRes.report;
   }
 
+  /** Single-provider path: call the model, fall back honestly on failure. */
+  private async runSingleProvider(
+    provider: AIProvider,
+    contents: string,
+    prompt: string,
+    context: any,
+    suggestedParameters?: Record<string, unknown>
+  ): Promise<string> {
+    try {
+      logger.info(`AI Engine calling provider "${provider.id}" (${provider.model})`);
+      const text = await provider.generate({
+        system: SYSTEM_PROMPT_CORE,
+        prompt: contents,
+        maxTokens: config.ai.maxTokens,
+      });
+      return text || 'Unable to generate analysis output from AI Engine.';
+    } catch (err: any) {
+      logger.error(`Error contacting AI provider "${provider.id}"`, { error: err.message });
+      return this.generatePhysicsFallbackResponse(
+        prompt,
+        context,
+        suggestedParameters,
+        `The ${provider.label} call failed: ${err.message}`
+      );
+    }
+  }
+
+  /**
+   * Ensemble path: query every selected provider in parallel, show each answer
+   * labeled, then append a combined conclusion. Providers that error are noted
+   * rather than dropped silently. The combined conclusion is itself written by
+   * one of the models (the first that succeeded) and is clearly labeled as such.
+   */
+  private async runEnsemble(
+    providers: AIProvider[],
+    contents: string,
+    prompt: string,
+    context: any,
+    suggestedParameters?: Record<string, unknown>
+  ): Promise<string> {
+    logger.info(`AI Engine ensemble across: ${providers.map((p) => p.id).join(', ')}`);
+
+    const results = await Promise.all(
+      providers.map(async (provider) => {
+        try {
+          const text = await provider.generate({
+            system: SYSTEM_PROMPT_CORE,
+            prompt: contents,
+            maxTokens: config.ai.maxTokens,
+          });
+          return { provider, text: text || '_(empty response)_', ok: true as const };
+        } catch (err: any) {
+          logger.error(`Ensemble member "${provider.id}" failed`, { error: err.message });
+          return { provider, text: `⚠️ ${provider.label} did not respond: ${err.message}`, ok: false as const };
+        }
+      })
+    );
+
+    const succeeded = results.filter((r) => r.ok);
+
+    // Every provider failed → honest fallback, not a fabricated summary.
+    if (succeeded.length === 0) {
+      return this.generatePhysicsFallbackResponse(
+        prompt,
+        context,
+        suggestedParameters,
+        `All selected AI providers failed (${providers.map((p) => p.label).join(', ')}).`
+      );
+    }
+
+    const individualSections = results
+      .map((r) => `### ${r.ok ? '' : '⚠️ '}${r.provider.label} \`${r.provider.model}\`\n\n${r.text}`)
+      .join('\n\n---\n\n');
+
+    const combined = await this.synthesizeCombined(succeeded);
+
+    const header =
+      `> 🧠 **Ensemble mode** — ${succeeded.length}/${providers.length} AI model(s) answered independently: ` +
+      `${succeeded.map((r) => r.provider.label).join(', ')}.`;
+
+    return `${header}\n\n## Combined conclusion\n\n${combined}\n\n---\n\n## Individual AI responses\n\n${individualSections}`;
+  }
+
+  /**
+   * Ask one model (the first that succeeded) to reconcile all answers into a
+   * single conclusion: consensus, disagreements, final recommendation. If that
+   * synthesis call fails, degrade to a plainly-labeled non-AI note rather than
+   * inventing a consensus.
+   */
+  private async synthesizeCombined(
+    succeeded: Array<{ provider: AIProvider; text: string }>
+  ): Promise<string> {
+    if (succeeded.length === 1) {
+      return succeeded[0].text;
+    }
+
+    const synthesizer = succeeded[0].provider;
+    const answersBlock = succeeded
+      .map((r, i) => `AI #${i + 1} (${r.provider.label}):\n${r.text}`)
+      .join('\n\n=====\n\n');
+
+    const synthPrompt = `Several independent AI models answered the same scientific request. Reconcile their answers into ONE conclusion.
+
+${answersBlock}
+
+Write a concise Markdown synthesis with:
+1. **Consensus** — points the models agree on.
+2. **Disagreements** — where they differ, and which is more physically sound.
+3. **Final recommendation** — the single best answer/parameters to act on.`;
+
+    try {
+      const text = await synthesizer.generate({
+        system: SYSTEM_PROMPT_CORE,
+        prompt: synthPrompt,
+        maxTokens: config.ai.maxTokens,
+      });
+      if (text) {
+        return `${text}\n\n_— synthesized by ${synthesizer.label} from ${succeeded.length} AI responses._`;
+      }
+    } catch (err: any) {
+      logger.error('Ensemble synthesis call failed', { error: err.message });
+    }
+
+    return `> ⚠️ _Automatic synthesis was unavailable, so no AI-combined conclusion was produced. Compare the ${succeeded.length} individual responses below._`;
+  }
+
   private generatePhysicsFallbackResponse(
     prompt: string,
     context: any,
@@ -175,9 +276,13 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     return `> ⚠️ **AI language model is not active — this is a built-in fallback, not an AI-generated answer.**
 > Reason: ${reason || 'The AI model call did not succeed.'}
 >
-> To enable real AI analysis, set \`ANTHROPIC_API_KEY\` in your \`.env\` (get a key at
-> https://console.anthropic.com/settings/keys). You can also pin a model with
-> \`ANTHROPIC_MODEL\` (default: \`claude-opus-5\`). Then restart the server.
+> To enable real AI analysis, set at least one provider API key in your \`.env\`
+> and restart the server:
+> - \`GEMINI_API_KEY\` — Google Gemini (free tier: https://aistudio.google.com/apikey)
+> - \`DEEPSEEK_API_KEY\` — DeepSeek (https://platform.deepseek.com)
+> - \`OPENAI_API_KEY\` — ChatGPT / OpenAI (https://platform.openai.com/api-keys)
+> - \`XAI_API_KEY\` — Grok / xAI (https://console.x.ai)
+> - \`ANTHROPIC_API_KEY\` — Claude (https://console.anthropic.com/settings/keys)
 
 ---
 

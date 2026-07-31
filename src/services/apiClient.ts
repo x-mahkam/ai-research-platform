@@ -152,6 +152,15 @@ export class ApiClient {
     return res.json();
   }
 
+  public async getAIProviders(): Promise<{
+    providers: { id: string; label: string; model: string; configured: boolean }[];
+    default?: string;
+  }> {
+    const res = await fetch('/api/ai/providers');
+    if (!res.ok) throw new Error('Failed to load AI providers');
+    return res.json();
+  }
+
   public async planResearch(goal: string): Promise<{
     planId: string;
     recommendedPlugin: string;

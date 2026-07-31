@@ -2,6 +2,7 @@ import express, { type Express } from 'express';
 import { container } from './core/container.js';
 import { requestLogger, securityMiddleware, errorHandler } from './api/middleware/index.js';
 import apiRouter from './api/routes/index.js';
+import { aiProviderRegistry } from './ai/providers/index.js';
 
 /**
  * Builds the API-only Express app (JSON parsing, logging, security headers,
@@ -13,6 +14,9 @@ export async function createApiApp(): Promise<Express> {
   const app = express();
 
   await container.initialize();
+
+  // Report which AI providers are active — the "did I set my API keys?" check.
+  aiProviderRegistry.logStartupStatus();
 
   // Model files (uploaded content) can be much larger than Express's 100kb
   // default, which otherwise fails uploads with "request entity too large".

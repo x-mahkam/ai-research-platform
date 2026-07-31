@@ -6,6 +6,7 @@ export interface CreateExperimentDTO {
   pluginId?: string;
   tags?: string[];
   parameters?: Record<string, unknown>;
+  aiProviders?: string[];
 }
 
 export function validateCreateExperimentDTO(data: any): CreateExperimentDTO {
@@ -21,5 +22,8 @@ export function validateCreateExperimentDTO(data: any): CreateExperimentDTO {
     pluginId: data.pluginId,
     tags: Array.isArray(data.tags) ? data.tags : undefined,
     parameters: data.parameters,
+    aiProviders: Array.isArray(data.aiProviders)
+      ? data.aiProviders.filter((id: unknown): id is string => typeof id === 'string')
+      : undefined,
   };
 }

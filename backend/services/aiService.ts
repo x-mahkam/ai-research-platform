@@ -3,6 +3,7 @@ import { reportRepository, IReportRepository } from '../repositories/reportRepos
 import { GeneratedReport } from '../shared/types.js';
 import { eventBus, DomainEventType } from '../events/eventEmitter.js';
 import { agentManager, physicsKnowledgeBase } from '../ai/index.js';
+import { aiProviderRegistry } from '../ai/providers/index.js';
 
 export class AIService {
   constructor(
@@ -35,6 +36,14 @@ export class AIService {
 
   public async queryKnowledge(query: string) {
     return physicsKnowledgeBase.searchKnowledge(query);
+  }
+
+  /** Which AI providers exist and which are configured (no keys exposed). */
+  public listProviders() {
+    return {
+      providers: aiProviderRegistry.meta(),
+      default: aiProviderRegistry.defaultProvider()?.id,
+    };
   }
 }
 
