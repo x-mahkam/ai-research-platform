@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   Clock,
   Languages,
-  KeyRound,
+  Settings,
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { ApiKeysModal } from '../modules/settings/components/ApiKeysModal';
@@ -133,15 +133,15 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="font-medium">{t('header.aiActive')}</span>
         </div>
 
-        {/* AI API keys */}
+        {/* Settings (AI keys + COMSOL path) */}
         <button
-          id="btn-header-keys"
+          id="btn-header-settings"
           onClick={() => setShowKeys(true)}
-          title={t('keys.open')}
+          title={t('settings.open')}
           className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer"
         >
-          <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="hidden md:inline">{t('keys.open')}</span>
+          <Settings className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden md:inline">{t('settings.open')}</span>
         </button>
 
         {/* Language switcher (UZ / EN) */}

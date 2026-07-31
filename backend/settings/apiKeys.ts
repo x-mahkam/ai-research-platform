@@ -2,6 +2,7 @@ import fs from 'fs';
 import { envInfo } from '../env.js';
 import { PROVIDER_ENV_KEYS } from '../configuration/index.js';
 import { aiProviderRegistry } from '../ai/providers/index.js';
+import { ComsolLocator } from '../comsol/ComsolLocator.js';
 import { LoggerService } from '../logging/logger.js';
 
 const logger = new LoggerService('ApiKeySettings');
@@ -53,4 +54,35 @@ export function updateProviderKeys(keys: Record<string, string>): void {
   }
 
   aiProviderRegistry.reload();
+}
+
+/** Whether a COMSOL executable is currently resolvable, and its path. */
+export function getComsolStatus(): { configured: boolean; path?: string } {
+  try {
+    const p = ComsolLocator.findExecutable();
+    return { configured: Boolean(p), path: p || undefined };
+  } catch {
+    return { configured: false };
+  }
+}
+
+/**
+ * Point the platform at comsolbatch (a file or its folder). Applies live
+ * (ComsolLocator reads COMSOL_EXECUTABLE each time it resolves) and persists to
+ * the .env in effect. COMSOL itself does NOT need to be open — the platform
+ * launches comsolbatch headlessly.
+ */
+export function updateComsolPath(execPath: string): { configured: boolean; path?: string } {
+  const value = typeof execPath === 'string' ? execPath.trim() : '';
+  if (value) {
+    process.env.COMSOL_EXECUTABLE = value;
+    ComsolLocator.setManualPath(value);
+    try {
+      upsertEnvFile(envInfo.path, { COMSOL_EXECUTABLE: value });
+      logger.info(`Saved COMSOL_EXECUTABLE to ${envInfo.path}`);
+    } catch (err: any) {
+      logger.error(`Could not persist COMSOL path to ${envInfo.path}: ${err.message}`);
+    }
+  }
+  return getComsolStatus();
 }

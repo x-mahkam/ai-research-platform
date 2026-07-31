@@ -31,36 +31,55 @@ export class ComsolLocator {
     return foundPath;
   }
 
+  /**
+   * Resolve a user-supplied path (a comsolbatch file OR a folder that contains
+   * it) to the actual executable FILE, or null. Used for both the manual path
+   * and the env vars so a folder is never returned in place of the binary.
+   */
+  private static resolveFromPath(val: string): string | null {
+    if (!val) return null;
+    try {
+      if (fs.existsSync(val) && fs.statSync(val).isFile()) {
+        return val;
+      }
+    } catch {
+      return null;
+    }
+    const candidates = [
+      path.join(val, 'comsolbatch'),
+      path.join(val, 'comsolbatch.exe'),
+      path.join(val, 'bin', 'comsolbatch'),
+      path.join(val, 'bin', 'comsolbatch.exe'),
+      path.join(val, 'bin', 'win64', 'comsolbatch.exe'),
+      path.join(val, 'Multiphysics', 'bin', 'win64', 'comsolbatch.exe'),
+      path.join(val, 'multiphysics', 'bin', 'comsolbatch'),
+      path.join(val, 'multiphysics', 'bin', 'win64', 'comsolbatch.exe'),
+    ];
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+          return candidate;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  }
+
   public static findExecutable(): string | null {
-    // 0. Manual Override Path
-    if (this.manualPath && fs.existsSync(this.manualPath)) {
-      return this.manualPath;
+    // 0. Manual Override Path (a file or a folder that contains comsolbatch)
+    if (this.manualPath) {
+      const resolved = this.resolveFromPath(this.manualPath);
+      if (resolved) return resolved;
     }
 
     // 1. Environment Variables
     const envVars = ['COMSOL_EXECUTABLE', 'COMSOLBATCH_PATH', 'COMSOL_PATH', 'COMSOL_ROOT'];
     for (const envVar of envVars) {
       const val = process.env[envVar];
-      if (val) {
-        if (fs.existsSync(val) && fs.statSync(val).isFile()) {
-          return val;
-        }
-        // If directory, search for comsolbatch binary inside
-        const candidates = [
-          path.join(val, 'comsolbatch'),
-          path.join(val, 'comsolbatch.exe'),
-          path.join(val, 'bin', 'comsolbatch'),
-          path.join(val, 'bin', 'comsolbatch.exe'),
-          path.join(val, 'bin', 'win64', 'comsolbatch.exe'),
-          path.join(val, 'multiphysics', 'bin', 'comsolbatch'),
-          path.join(val, 'multiphysics', 'bin', 'win64', 'comsolbatch.exe'),
-        ];
-        for (const candidate of candidates) {
-          if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-            return candidate;
-          }
-        }
-      }
+      const resolved = val ? this.resolveFromPath(val) : null;
+      if (resolved) return resolved;
     }
 
     // 2. PATH Environment Variable

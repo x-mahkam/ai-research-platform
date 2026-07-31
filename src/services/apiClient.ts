@@ -152,6 +152,25 @@ export class ApiClient {
     return res.json();
   }
 
+  public async getComsolStatus(): Promise<{ configured: boolean; path?: string }> {
+    const res = await fetch('/api/settings/comsol');
+    if (!res.ok) throw new Error('Failed to load COMSOL status');
+    return res.json();
+  }
+
+  public async saveComsolPath(path: string): Promise<{ configured: boolean; path?: string }> {
+    const res = await fetch('/api/settings/comsol', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to save COMSOL path');
+    }
+    return res.json();
+  }
+
   public async planExperimentSetup(input: {
     objective: string;
     simulator?: string;

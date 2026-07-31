@@ -12,5 +12,7 @@ router.post('/ai/optimize', aiController.predictOptimization);
 router.get('/ai/knowledge', aiController.queryKnowledge);
 router.get('/ai/providers', aiController.listProviders);
 router.post('/ai/keys', aiController.saveKeys);
+router.get('/settings/comsol', aiController.comsolStatus);
+router.post('/settings/comsol', aiController.saveComsol);
 
 export default router;
