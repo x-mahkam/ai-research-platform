@@ -147,6 +147,18 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   const handleUploadModelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !projectId) return;
+
+    // Binary solver files (a COMSOL .mph is a zip archive, etc.) get corrupted
+    // when read as text. Refuse to upload them and point the user at the
+    // by-path option, which reads the real bytes in place — no size limit.
+    const BINARY_MODEL_EXTS = ['mph', 'fsp', 'nas', 'vtu', 'tdr', 'sim', 'zip'];
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (BINARY_MODEL_EXTS.includes(ext)) {
+      setUploadError(t('modal.binaryUseFilePath', { ext: `.${ext}` }));
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     setUploadError(null);
     try {
