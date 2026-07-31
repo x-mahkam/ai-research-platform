@@ -126,6 +126,8 @@ const en: Dict = {
     'No AI provider is configured. Set an API key (e.g. GEMINI_API_KEY) in your .env to enable AI analysis. The experiment still runs without it.',
   'modal.ensembleHint': 'Ensemble mode: all {n} models answer, then results are combined.',
   'modal.pickHint': 'Pick one, or select several to compare their answers and get a combined conclusion.',
+  'modal.noKey': 'no API key',
+  'modal.providerNoKey': 'Set {key} in .env to enable this provider',
   'modal.runExperiment': 'Run Experiment',
 
   // Common
@@ -252,6 +254,8 @@ const uz: Dict = {
     'Hech qanday AI provayder sozlanmagan. AI tahlilini yoqish uchun .env faylida API kalit (masalan GEMINI_API_KEY) o‘rnating. Eksperiment usiz ham ishlaydi.',
   'modal.ensembleHint': 'Ansambl rejim: {n} ta model javob beradi, keyin natijalar birlashtiriladi.',
   'modal.pickHint': 'Bittasini tanlang yoki javoblarini solishtirib umumiy xulosa olish uchun bir nechtasini belgilang.',
+  'modal.noKey': 'kalit yo‘q',
+  'modal.providerNoKey': 'Bu provayderni yoqish uchun .env‘da {key} ni o‘rnating',
   'modal.runExperiment': 'Eksperimentni ishga tushirish',
 
   // Common
