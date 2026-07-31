@@ -18,6 +18,15 @@ export interface IAIContextPayload {
 }
 
 export class AIContextAggregator {
+  /** Surface the solver log tail from a unified result's diagnostics. */
+  private attachSolverLog(payload: IAIContextPayload, res: unknown): void {
+    const diag = (res as { diagnostics?: Record<string, unknown> })?.diagnostics;
+    const solverLog = diag?.solverLog;
+    if (typeof solverLog === 'string' && solverLog.trim()) {
+      payload.rawLogsSnippet = solverLog.split(/\r?\n/).slice(-120);
+    }
+  }
+
   public async buildContext(experimentId?: string, jobId?: string): Promise<IAIContextPayload> {
     const payload: IAIContextPayload = {};
 
@@ -37,6 +46,28 @@ export class AIContextAggregator {
             }
             payload.parameters = paramMap;
           }
+
+          // The experiment record carries the unified results of its last run
+          // (metrics + solver diagnostics). Use it so the AI has real data even
+          // when the caller passes only an experimentId and no jobId.
+          const expResults = (exp as { results?: unknown }).results;
+          if (expResults && typeof expResults === 'object' && Object.keys(expResults).length) {
+            payload.unifiedResults = expResults;
+            this.attachSolverLog(payload, expResults);
+          } else {
+            // Fall back to the latest stored result for this experiment.
+            try {
+              const byExp = resultManager.getResultsByExperiment(experimentId);
+              const latest = byExp && byExp.length ? byExp[byExp.length - 1] : undefined;
+              if (latest) {
+                payload.unifiedResults = latest;
+                if (!payload.jobId) payload.jobId = latest.jobId;
+                this.attachSolverLog(payload, latest);
+              }
+            } catch {
+              // ignore
+            }
+          }
         }
       } catch {
         // ignore
@@ -52,16 +83,12 @@ export class AIContextAggregator {
           payload.simulationStatus = job.status;
         }
 
+        // A specific jobId overrides the experiment-level result with the
+        // exact run the caller asked about.
         const res = resultManager.getResultsByJob(jobId);
         if (res) {
           payload.unifiedResults = res;
-          // Surface the solver log tail explicitly so the model reads the
-          // actual run output, not only the flattened metrics.
-          const diag = (res as { diagnostics?: Record<string, unknown> }).diagnostics;
-          const solverLog = diag?.solverLog;
-          if (typeof solverLog === 'string' && solverLog.trim()) {
-            payload.rawLogsSnippet = solverLog.split(/\r?\n/).slice(-120);
-          }
+          this.attachSolverLog(payload, res);
         }
       } catch {
         // ignore
