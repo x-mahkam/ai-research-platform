@@ -6,6 +6,10 @@ export interface AIChatDTO {
   history?: unknown[];
   /** AI provider id(s) to use for this request. More than one → ensemble. */
   providers?: string[];
+  /** Experiment this chat is about — lets the server load its real results. */
+  experimentId?: string;
+  /** Specific simulation run to analyze, if any. */
+  jobId?: string;
 }
 
 export interface AIReportDTO {
@@ -24,6 +28,8 @@ export function validateAIChatDTO(data: any): AIChatDTO {
     providers: Array.isArray(data.providers)
       ? data.providers.filter((id: unknown): id is string => typeof id === 'string')
       : undefined,
+    experimentId: typeof data.experimentId === 'string' ? data.experimentId : undefined,
+    jobId: typeof data.jobId === 'string' ? data.jobId : undefined,
   };
 }
 

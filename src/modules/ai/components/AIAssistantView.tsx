@@ -68,8 +68,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
+          experimentId: experiment.id,
           providers: experiment.aiProviders,
           experimentContext: {
+            id: experiment.id,
             title: experiment.title,
             parameters: experiment.parameters,
             results: experiment.results?.metrics,
