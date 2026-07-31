@@ -10,7 +10,11 @@ export interface ISandboxExecutionOptions {
 }
 
 export class PluginSandbox {
-  private defaultTimeoutMs: number = 30000; // 30s timeout guard
+  // Real solver runs (COMSOL, TCAD, etc.) routinely take minutes to hours —
+  // COMSOL alone needs ~30s+ just to start its engine and check out a license.
+  // A short guard here silently kills legitimate simulations. Default to the
+  // solver hard-limit (1h); override with PLUGIN_SANDBOX_TIMEOUT_MS if needed.
+  private defaultTimeoutMs: number = Number(process.env.PLUGIN_SANDBOX_TIMEOUT_MS) || 3600000; // 1 hour
 
   public async executeInSandbox<T>(
     pluginId: string,
