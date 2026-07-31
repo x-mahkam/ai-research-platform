@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { KeyRound, X, Check, ExternalLink, RefreshCw } from 'lucide-react';
+import { KeyRound, X, Check, ExternalLink, RefreshCw, Cpu, Settings } from 'lucide-react';
 import { apiClient } from '../../../services/apiClient';
 import { useI18n } from '../../../i18n';
 
@@ -27,14 +27,26 @@ export const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose, onS
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  // COMSOL local solver
+  const [comsol, setComsol] = useState<{ configured: boolean; path?: string } | null>(null);
+  const [comsolInput, setComsolInput] = useState('');
+  const [savingComsol, setSavingComsol] = useState(false);
+  const [comsolMessage, setComsolMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
     setValues({});
     setMessage(null);
+    setComsolInput('');
+    setComsolMessage(null);
     apiClient
       .getAIProviders()
       .then((d) => setProviders(d.providers))
       .catch(() => setProviders([]));
+    apiClient
+      .getComsolStatus()
+      .then(setComsol)
+      .catch(() => setComsol({ configured: false }));
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -59,22 +71,87 @@ export const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose, onS
     }
   };
 
+  const handleSaveComsol = async () => {
+    if (!comsolInput.trim()) return;
+    setSavingComsol(true);
+    setComsolMessage(null);
+    try {
+      const res = await apiClient.saveComsolPath(comsolInput.trim());
+      setComsol(res);
+      setComsolMessage(res.configured ? t('comsol.saved') : t('comsol.saveNotFound'));
+      if (res.configured) setComsolInput('');
+    } catch (err) {
+      setComsolMessage(err instanceof Error ? err.message : 'Failed to save COMSOL path');
+    } finally {
+      setSavingComsol(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-slate-100 my-8">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-5 shadow-2xl text-slate-100 my-8">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center space-x-2">
-            <KeyRound className="w-5 h-5 text-cyan-400" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('keys.title')}</h3>
+            <Settings className="w-5 h-5 text-cyan-400" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('settings.title')}</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <p className="text-[11px] text-slate-400 leading-relaxed">{t('keys.desc')}</p>
+        {/* COMSOL local solver */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold text-slate-200">{t('comsol.section')}</span>
+            </div>
+            <span
+              className={`flex items-center gap-1 text-[10px] font-mono ${
+                comsol?.configured ? 'text-emerald-400' : 'text-amber-400'
+              }`}
+            >
+              {comsol?.configured && <Check className="w-3 h-3" />}
+              {comsol?.configured ? t('comsol.detected') : t('comsol.notDetected')}
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('comsol.desc')}</p>
+          {comsol?.configured && comsol.path && (
+            <p className="text-[10px] font-mono text-emerald-300/80 break-all bg-slate-950 border border-slate-800 rounded px-2 py-1">
+              {comsol.path}
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={comsolInput}
+              onChange={(e) => setComsolInput(e.target.value)}
+              placeholder={t('comsol.placeholder')}
+              className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+            />
+            <button
+              onClick={handleSaveComsol}
+              disabled={savingComsol || !comsolInput.trim()}
+              className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            >
+              {savingComsol ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />}
+              {t('comsol.save')}
+            </button>
+          </div>
+          {comsolMessage && <p className="text-[11px] text-cyan-300">{comsolMessage}</p>}
+        </div>
 
+        <div className="border-t border-slate-800" />
+
+        {/* AI API keys */}
         <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-bold text-slate-200">{t('keys.section')}</span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('keys.desc')}</p>
+
           {providers.map((p) => {
             const info = KEY_INFO[p.id];
             return (
@@ -120,24 +197,27 @@ export const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose, onS
               </div>
             );
           })}
+
+          {message && <p className="text-[11px] text-cyan-300">{message}</p>}
+
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-md flex items-center gap-1.5"
+            >
+              {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
+              {saving ? t('keys.saving') : t('keys.save')}
+            </button>
+          </div>
         </div>
 
-        {message && <p className="text-[11px] text-cyan-300">{message}</p>}
-
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+        <div className="flex justify-end pt-2 border-t border-slate-800">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-medium cursor-pointer"
           >
             {t('common.close')}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-md flex items-center gap-1.5"
-          >
-            {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
-            {saving ? t('keys.saving') : t('keys.save')}
           </button>
         </div>
       </div>

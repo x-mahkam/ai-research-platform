@@ -160,6 +160,20 @@ const en: Dict = {
   'chat.preset.results': 'Analyze the latest results — highlight key trends and any anomalies.',
   'chat.preset.next': 'Summarize this simulation setup and recommend the next experiment.',
 
+  // Settings panel
+  'settings.open': 'Settings',
+  'settings.title': 'Settings',
+  'keys.section': 'AI API keys',
+  'comsol.section': 'COMSOL (local solver)',
+  'comsol.desc':
+    'Point the platform at your comsolbatch.exe (or the folder that contains it) so it can run .mph models. COMSOL does NOT need to be open — the platform launches it in the background.',
+  'comsol.detected': 'Detected',
+  'comsol.notDetected': 'Not detected',
+  'comsol.placeholder': 'e.g. D:\\…\\COMSOL63\\Multiphysics\\bin\\win64\\comsolbatch.exe',
+  'comsol.save': 'Save COMSOL path',
+  'comsol.saved': 'Saved — COMSOL is now configured.',
+  'comsol.saveNotFound': 'Saved, but comsolbatch was not found there. Double-check the path.',
+
   // API keys settings
   'keys.title': 'AI API Keys',
   'keys.desc': 'Enter an API key to enable a provider. Keys are saved on this computer (.env) and take effect immediately — no restart, no file editing.',
@@ -332,6 +346,20 @@ const uz: Dict = {
   'chat.preset.params': 'Qaysi kirish parametrlari natijaga eng ko‘p ta’sir qiladi va qanday oraliqda o‘zgartiray?',
   'chat.preset.results': 'So‘nggi natijalarni tahlil qil — asosiy tendensiyalar va anomaliyalarni ko‘rsat.',
   'chat.preset.next': 'Bu simulyatsiya sozlamasini jamla va keyingi eksperimentni tavsiya qil.',
+
+  // Settings panel
+  'settings.open': 'Sozlamalar',
+  'settings.title': 'Sozlamalar',
+  'keys.section': 'AI API kalitlari',
+  'comsol.section': 'COMSOL (lokal yechuvchi)',
+  'comsol.desc':
+    'Platforma .mph modellarni ishga tushira olishi uchun comsolbatch.exe (yoki uni o‘z ichiga olgan papka) yo‘lini ko‘rsating. COMSOL ochiq bo‘lishi SHART EMAS — platforma uni fonda o‘zi ishga tushiradi.',
+  'comsol.detected': 'Topildi',
+  'comsol.notDetected': 'Topilmadi',
+  'comsol.placeholder': 'masalan: D:\\…\\COMSOL63\\Multiphysics\\bin\\win64\\comsolbatch.exe',
+  'comsol.save': 'COMSOL yo‘lini saqlash',
+  'comsol.saved': 'Saqlandi — COMSOL endi sozlangan.',
+  'comsol.saveNotFound': 'Saqlandi, lekin comsolbatch u yerdan topilmadi. Yo‘lni tekshiring.',
 
   // API keys settings
   'keys.title': 'AI API kalitlari',

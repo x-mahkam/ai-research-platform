@@ -3,7 +3,7 @@ import { aiService, AIService } from '../../services/aiService.js';
 import { validateAIChatDTO, validateAIReportDTO } from '../dto/aiDTO.js';
 import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
 import { ValidationError } from '../../shared/errors.js';
-import { updateProviderKeys } from '../../settings/apiKeys.js';
+import { updateProviderKeys, getComsolStatus, updateComsolPath } from '../../settings/apiKeys.js';
 
 export class AIController {
   constructor(private service: AIService = aiService) {}
@@ -115,6 +115,35 @@ export class AIController {
       const keys = req.body && typeof req.body === 'object' ? (req.body as Record<string, string>) : {};
       updateProviderKeys(keys);
       res.json(this.service.listProviders());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public comsolStatus = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      res.json(getComsolStatus());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public saveComsol = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const remote = req.socket.remoteAddress || '';
+      const isLocal =
+        remote === '127.0.0.1' ||
+        remote === '::1' ||
+        remote === '::ffff:127.0.0.1' ||
+        req.hostname === 'localhost';
+      if (!isLocal) {
+        return res.status(403).json({ error: 'The COMSOL path can only be set from the local machine.' });
+      }
+      const p = req.body?.path;
+      if (typeof p !== 'string' || !p.trim()) {
+        throw new ValidationError('A COMSOL executable path (or its folder) is required.');
+      }
+      res.json(updateComsolPath(p));
     } catch (err) {
       next(err);
     }
