@@ -14,6 +14,7 @@ import {
   ChevronRight,
   TrendingUp,
 } from 'lucide-react';
+import { useI18n } from '../../../i18n';
 
 interface DashboardViewProps {
   projects: Project[];
@@ -38,10 +39,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNewExperimentModal,
   onQuickRunSimulation,
 }) => {
+  const { t } = useI18n();
   const activeProjects = projects.filter((p) => p.status === 'Active');
   const runningJobs = simulationJobs.filter((j) => j.status === 'Running' || j.status === 'Queued');
   const completedJobs = simulationJobs.filter((j) => j.status === 'Completed');
-  const sentaurusPlugin = plugins.find((p) => p.id === 'sentaurus-tcad');
 
   return (
     <div id="dashboard-root" className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -56,8 +57,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">AI Research Platform Overview</h1>
           <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-            Automating multi-physics and semiconductor TCAD simulation workflows. Sentaurus TCAD plugin active with
-            automated parameter optimization, real-time telemetry, and AI report generation.
+            {t('dash.bannerSubtitle')}
           </p>
         </div>
 
@@ -146,13 +146,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           className="bg-slate-900 p-4 rounded-xl border border-slate-800 hover:border-slate-700 transition cursor-pointer group space-y-2"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Primary Plugin</span>
+            <span className="text-xs font-medium text-slate-400">{t('dash.primaryPlugin')}</span>
             <Blocks className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-bold text-emerald-300 truncate">{sentaurusPlugin?.name || 'Sentaurus'}</span>
+            <span className="text-sm font-bold text-emerald-300 truncate">{plugins[0]?.name || '—'}</span>
             <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded font-mono">
-              Valid License
+              {t('dash.pluginsAvailable', { n: plugins.length })}
             </span>
           </div>
           <div className="text-[11px] text-emerald-400 flex items-center space-x-1 pt-1">
@@ -236,37 +236,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4">
           <div className="flex items-center space-x-2">
             <Sparkles className="w-4 h-4 text-cyan-400" />
-            <h2 className="text-sm font-bold text-slate-100">AI Scientist Insights</h2>
+            <h2 className="text-sm font-bold text-slate-100">{t('dash.insights')}</h2>
           </div>
 
-          <div className="bg-slate-800/80 p-4 rounded-lg border border-slate-700/80 space-y-3 text-xs">
-            <div className="flex items-center justify-between font-mono text-[11px] text-cyan-400">
-              <span>ARP-010 RECOMMENDATION</span>
-              <span>CONFIDENCE: 94%</span>
+          {completedJobs.length > 0 ? (
+            <div className="bg-slate-800/80 p-4 rounded-lg border border-slate-700/80 space-y-3 text-xs">
+              <p className="text-slate-300 leading-relaxed text-[11px]">
+                {t('dash.haveRuns', { n: completedJobs.length })}
+              </p>
+              <button
+                onClick={() => onNavigateTab('ai_assistant')}
+                className="w-full bg-cyan-600/30 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-700/80 py-2 rounded font-medium transition cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t('dash.analyzeAI')}</span>
+              </button>
             </div>
-            <p className="text-slate-300 leading-relaxed text-[11px]">
-              Analysis of your recent semiconductor I-V sweep shows subthreshold swing at <strong>63.8 mV/dec</strong>.
-              Decreasing channel width from 30nm to 25nm will reduce off-state leakage by an estimated <strong>18%</strong> without sacrificing drive current.
-            </p>
-            <div className="bg-slate-900 p-2.5 rounded border border-slate-750 font-mono text-[11px] space-y-1 text-slate-300">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Workfunction (eV):</span>
-                <span className="text-cyan-300 font-bold">4.58 → 4.62 eV</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">EOT Target:</span>
-                <span className="text-cyan-300 font-bold">0.65 nm</span>
-              </div>
+          ) : (
+            <div className="bg-slate-800/80 p-4 rounded-lg border border-slate-700/80 space-y-3 text-xs">
+              <div className="font-mono text-[11px] text-slate-400 uppercase tracking-wider">{t('dash.noAnalysisTitle')}</div>
+              <p className="text-slate-300 leading-relaxed text-[11px]">{t('dash.noAnalysisBody')}</p>
+              <ol className="space-y-1 text-[11px] text-slate-400">
+                <li>{t('dash.step1')}</li>
+                <li>{t('dash.step2')}</li>
+                <li>{t('dash.step3')}</li>
+                <li>{t('dash.step4')}</li>
+              </ol>
+              <button
+                onClick={() => onNavigateTab('projects')}
+                className="w-full bg-cyan-600/30 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-700/80 py-2 rounded font-medium transition cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
+              >
+                <FolderGit2 className="w-3.5 h-3.5" />
+                <span>{t('dash.goProjects')}</span>
+              </button>
             </div>
-
-            <button
-              onClick={() => onNavigateTab('ai_assistant')}
-              className="w-full bg-cyan-600/30 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-700/80 py-2 rounded font-medium transition cursor-pointer text-center text-xs flex items-center justify-center space-x-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ask AI Assistant for Full Optimization</span>
-            </button>
-          </div>
+          )}
 
           {/* Quick shortcuts */}
           <div className="space-y-2 pt-2">
