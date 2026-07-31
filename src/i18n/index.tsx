@@ -128,6 +128,8 @@ const en: Dict = {
   'modal.pickHint': 'Pick one, or select several to compare their answers and get a combined conclusion.',
   'modal.noKey': 'no API key',
   'modal.providerNoKey': 'Set {key} in .env to enable this provider',
+  'modal.binaryUseFilePath':
+    '{ext} is a binary solver file — uploading corrupts it. Instead, paste its full path in the "full path on this computer" field below, then click "Use file path".',
   'modal.runExperiment': 'Run Experiment',
 
   // Dashboard
@@ -315,6 +317,8 @@ const uz: Dict = {
   'modal.pickHint': 'Bittasini tanlang yoki javoblarini solishtirib umumiy xulosa olish uchun bir nechtasini belgilang.',
   'modal.noKey': 'kalit yo‘q',
   'modal.providerNoKey': 'Bu provayderni yoqish uchun .env‘da {key} ni o‘rnating',
+  'modal.binaryUseFilePath':
+    '{ext} — bu binary yechuvchi fayl, yuklash uni buzadi. Buning o‘rniga pastdagi "to‘liq yo‘l" maydoniga uning to‘liq yo‘lini joylashtiring va "Use file path" ni bosing.',
   'modal.runExperiment': 'Eksperimentni ishga tushirish',
 
   // Dashboard
