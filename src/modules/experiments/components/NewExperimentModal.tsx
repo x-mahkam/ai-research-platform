@@ -14,7 +14,17 @@ import {
   RefreshCw,
   Target,
   Sparkles,
+  Lock,
 } from 'lucide-react';
+
+// Which .env variable enables each provider (ids don't all match the var name).
+const PROVIDER_ENV_KEY: Record<string, string> = {
+  gemini: 'GEMINI_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  grok: 'XAI_API_KEY',
+  claude: 'ANTHROPIC_API_KEY',
+};
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -47,7 +57,8 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [modelPath, setModelPath] = useState<string>('');
 
-  // AI provider selection (only providers with a configured key are shown).
+  // All five providers are listed; ones without an API key show disabled so the
+  // user can see what's available and why a provider isn't selectable.
   const [aiProviders, setAiProviders] = useState<
     { id: string; label: string; model: string; configured: boolean }[]
   >([]);
@@ -58,9 +69,9 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
     apiClient
       .getAIProviders()
       .then((data) => {
-        const configured = data.providers.filter((p) => p.configured);
-        setAiProviders(configured);
+        setAiProviders(data.providers);
         // Preselect the default provider (or the first configured one).
+        const configured = data.providers.filter((p) => p.configured);
         const preset = configured.find((p) => p.id === data.default) || configured[0];
         setSelectedProviders(preset ? [preset.id] : []);
       })
@@ -71,10 +82,14 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   }, [isOpen]);
 
   const toggleProvider = (id: string) => {
+    // Only configured providers can be toggled.
+    if (!aiProviders.find((p) => p.id === id)?.configured) return;
     setSelectedProviders((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
   };
+
+  const configuredCount = aiProviders.filter((p) => p.configured).length;
 
   // Load models whenever target project changes
   useEffect(() => {
@@ -464,30 +479,43 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   {aiProviders.map((p) => {
                     const on = selectedProviders.includes(p.id);
+                    const disabled = !p.configured;
                     return (
                       <button
                         key={p.id}
                         type="button"
                         onClick={() => toggleProvider(p.id)}
-                        className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-left transition cursor-pointer ${
-                          on
-                            ? 'border-cyan-500 bg-cyan-950/40 text-cyan-200'
-                            : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500'
+                        disabled={disabled}
+                        title={disabled ? t('modal.providerNoKey', { key: PROVIDER_ENV_KEY[p.id] || `${p.id.toUpperCase()}_API_KEY` }) : p.label}
+                        className={`flex items-center justify-between gap-2 rounded-lg border p-2 text-left transition ${
+                          disabled
+                            ? 'border-slate-800 bg-slate-900/60 text-slate-600 cursor-not-allowed'
+                            : on
+                              ? 'border-cyan-500 bg-cyan-950/40 text-cyan-200 cursor-pointer'
+                              : 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500 cursor-pointer'
                         }`}
                       >
                         <span className="min-w-0">
                           <span className="block text-[11px] font-semibold truncate">{p.label}</span>
-                          <span className="block text-[10px] font-mono text-slate-500 truncate">{p.model}</span>
+                          <span className="block text-[10px] font-mono truncate opacity-80">
+                            {disabled ? t('modal.noKey') : p.model}
+                          </span>
                         </span>
-                        {on && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                        {disabled ? (
+                          <Lock className="w-3 h-3 text-slate-600 shrink-0" />
+                        ) : (
+                          on && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                        )}
                       </button>
                     );
                   })}
                 </div>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  {selectedProviders.length > 1
-                    ? t('modal.ensembleHint', { n: selectedProviders.length })
-                    : t('modal.pickHint')}
+                  {configuredCount === 0
+                    ? t('modal.noProvider')
+                    : selectedProviders.length > 1
+                      ? t('modal.ensembleHint', { n: selectedProviders.length })
+                      : t('modal.pickHint')}
                 </p>
               </>
             )}
