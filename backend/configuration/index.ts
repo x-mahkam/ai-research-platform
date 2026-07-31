@@ -23,6 +23,34 @@ export interface AppConfig {
   };
 }
 
+// Read the provider config from the current environment. Called at import and
+// again by the registry's reload() after keys are changed at runtime, so newly
+// set keys take effect without a restart.
+export function readAiProvidersFromEnv(): AppConfig['ai']['providers'] {
+  return {
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY,
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_API_KEY,
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    },
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY,
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    },
+    grok: {
+      apiKey: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
+      model: process.env.GROK_MODEL || 'grok-2-latest',
+    },
+    claude: {
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
+    },
+  };
+}
+
 export const config: AppConfig = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 3000,
@@ -34,34 +62,22 @@ export const config: AppConfig = {
     // return a clearly-labeled built-in fallback (not real AI output).
     defaultProvider: process.env.AI_PROVIDER,
     maxTokens: Number(process.env.AI_MAX_TOKENS || process.env.ANTHROPIC_MAX_TOKENS) || 16000,
-    providers: {
-      gemini: {
-        apiKey: process.env.GEMINI_API_KEY,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-      },
-      deepseek: {
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-      },
-      openai: {
-        apiKey: process.env.OPENAI_API_KEY,
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      },
-      grok: {
-        apiKey: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
-        model: process.env.GROK_MODEL || 'grok-2-latest',
-      },
-      claude: {
-        apiKey: process.env.ANTHROPIC_API_KEY,
-        model: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
-      },
-    },
+    providers: readAiProvidersFromEnv(),
   },
   simulation: {
     defaultHostMachine: 'node-compute-02.arp.local',
     defaultCpuUsage: 78.2,
     defaultMemoryUsageGb: 8.5,
   },
+};
+
+// The .env variable that enables each provider (ids don't all match the name).
+export const PROVIDER_ENV_KEYS: Record<string, string> = {
+  gemini: 'GEMINI_API_KEY',
+  deepseek: 'DEEPSEEK_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  grok: 'XAI_API_KEY',
+  claude: 'ANTHROPIC_API_KEY',
 };
 
 export const SYSTEM_CONSTANTS = {

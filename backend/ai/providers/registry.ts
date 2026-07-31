@@ -1,4 +1,4 @@
-import { config } from '../../configuration/index.js';
+import { config, readAiProvidersFromEnv } from '../../configuration/index.js';
 import { LoggerService } from '../../logging/logger.js';
 import { AIProvider, AIProviderMeta } from './types.js';
 import { OpenAICompatibleProvider } from './OpenAICompatibleProvider.js';
@@ -18,10 +18,17 @@ const GROK_BASE_URL = 'https://api.x.ai/v1';
  * that are actually usable, with a sensible default when nothing is pinned.
  */
 export class AIProviderRegistry {
-  private readonly providers: AIProvider[];
+  private providers: AIProvider[] = [];
 
   constructor() {
-    const p = config.ai.providers;
+    this.reload();
+  }
+
+  /** (Re)build the provider list from the current environment. Called at
+   *  startup and again after keys are changed at runtime, so new keys take
+   *  effect without a server restart. */
+  public reload(): void {
+    const p = readAiProvidersFromEnv();
     this.providers = [
       new OpenAICompatibleProvider('gemini', 'Google Gemini', p.gemini.model, p.gemini.apiKey, GEMINI_BASE_URL),
       new OpenAICompatibleProvider('deepseek', 'DeepSeek', p.deepseek.model, p.deepseek.apiKey, DEEPSEEK_BASE_URL),
