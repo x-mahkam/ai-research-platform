@@ -73,11 +73,20 @@ export class SimulationExecutionManager {
         `[${formatLogTimestamp()}] Execution delegated to PluginRuntime (Plugin: ${context.pluginId})`
       );
 
+      const startedAt = Date.now();
       const pluginResults = await pluginRuntime.executePlugin({
         pluginId: context.pluginId,
         parameters: context.parameters,
         workspacePath: context.workspacePath,
       });
+
+      // Report the real elapsed time. Prefer the solver's own reported
+      // executionTimeMs (e.g. COMSOL) and fall back to measured wall clock,
+      // rather than a hardcoded placeholder.
+      const reportedMs = Number((pluginResults as { executionTimeMs?: unknown })?.executionTimeMs);
+      const durationSeconds = Number.isFinite(reportedMs) && reportedMs > 0
+        ? reportedMs / 1000
+        : (Date.now() - startedAt) / 1000;
 
       return {
         jobId: context.jobId,
@@ -85,7 +94,7 @@ export class SimulationExecutionManager {
         exitCode: 0,
         logs: [`[${formatLogTimestamp()}] Plugin SDK execution completed successfully in isolated runtime sandbox.`],
         results: pluginResults as any,
-        durationSeconds: 8.5,
+        durationSeconds,
       };
     }
 
