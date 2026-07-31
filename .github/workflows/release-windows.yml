@@ -28,12 +28,16 @@ jobs:
         with:
           node-version: '22'
 
-      # Use `npm install`, not `npm ci`: the committed lockfile is generated on
-      # Linux, and `npm ci` skips platform-specific optional deps on Windows
-      # (npm bug #4828) — which drops @rollup/rollup-win32-x64-msvc (Vite build)
-      # and the native @libsql Windows binary.
+      # The committed lockfile is generated on Linux; reusing it on Windows
+      # (npm bug #4828) drops platform-specific optional deps —
+      # @rollup/rollup-win32-x64-msvc (needed by the Vite build) and the native
+      # @libsql Windows binary. Delete it so npm resolves the tree fresh for
+      # this platform and pulls the Windows binaries.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        shell: pwsh
+        run: |
+          Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
+          npm install --no-audit --no-fund
 
       - name: Build (client + server bundle)
         run: npm run build
@@ -47,7 +51,6 @@ jobs:
           # Built app + manifests
           Copy-Item -Recurse dist "$pkg/dist"
           Copy-Item package.json "$pkg/package.json"
-          Copy-Item package-lock.json "$pkg/package-lock.json"
           Copy-Item .env.example "$pkg/.env.example"
           Copy-Item packaging/windows/Start-ARP.bat "$pkg/Start-ARP.bat"
           Copy-Item packaging/windows/README-INSTALL.txt "$pkg/README-INSTALL.txt"
