@@ -130,6 +130,23 @@ const en: Dict = {
   'modal.providerNoKey': 'Set {key} in .env to enable this provider',
   'modal.runExperiment': 'Run Experiment',
 
+  // Dashboard
+  'dash.bannerSubtitle':
+    'Automating multi-physics simulation workflows across COMSOL, TCAD, and other solvers — parameter sweeps, real-time telemetry, and AI analysis of your own models.',
+  'dash.primaryPlugin': 'Simulators',
+  'dash.pluginsAvailable': '{n} available',
+  'dash.insights': 'AI Scientist Insights',
+  'dash.noAnalysisTitle': 'No analysis yet',
+  'dash.noAnalysisBody':
+    'Nothing here is pre-filled or simulated. Once you run an experiment, the AI\'s insights about YOUR model appear here.',
+  'dash.step1': '1. Add your model (e.g. .mph) to a project',
+  'dash.step2': '2. Create an experiment and select that model',
+  'dash.step3': '3. Run Simulation — your solver computes it locally',
+  'dash.step4': '4. The AI Assistant analyzes your real results',
+  'dash.goProjects': 'Go to Projects',
+  'dash.haveRuns': 'You have {n} completed run(s). Open the AI Assistant to analyze your actual results.',
+  'dash.analyzeAI': 'Analyze with AI',
+
   // AI chat assistant
   'chat.title': 'AI Scientist Chat Assistant',
   'chat.subtitle':
@@ -285,6 +302,23 @@ const uz: Dict = {
   'modal.noKey': 'kalit yo‘q',
   'modal.providerNoKey': 'Bu provayderni yoqish uchun .env‘da {key} ni o‘rnating',
   'modal.runExperiment': 'Eksperimentni ishga tushirish',
+
+  // Dashboard
+  'dash.bannerSubtitle':
+    'Ko‘p-fizikali simulyatsiya jarayonlarini avtomatlashtiradi — COMSOL, TCAD va boshqa yechuvchilar uchun: parametr sweep, real vaqt telemetriyasi va o‘z modellaringizni AI tahlili.',
+  'dash.primaryPlugin': 'Simulyatorlar',
+  'dash.pluginsAvailable': '{n} ta mavjud',
+  'dash.insights': 'AI Olim tahlillari',
+  'dash.noAnalysisTitle': 'Hali tahlil yo‘q',
+  'dash.noAnalysisBody':
+    'Bu yerda hech narsa oldindan to‘ldirilmagan yoki soxta emas. Eksperiment ishga tushirganingizdan so‘ng, AI’ning AYNAN SIZNING modelingiz haqidagi tahlili shu yerda paydo bo‘ladi.',
+  'dash.step1': '1. Modelingizni (masalan .mph) loyihaga qo‘shing',
+  'dash.step2': '2. Eksperiment yarating va o‘sha modelni tanlang',
+  'dash.step3': '3. "Run Simulation" — yechuvchingiz lokal hisoblaydi',
+  'dash.step4': '4. AI yordamchisi haqiqiy natijalaringizni tahlil qiladi',
+  'dash.goProjects': 'Loyihalarga o‘tish',
+  'dash.haveRuns': '{n} ta yakunlangan hisob bor. Haqiqiy natijalarni tahlil qilish uchun AI yordamchisini oching.',
+  'dash.analyzeAI': 'AI bilan tahlil qilish',
 
   // AI chat assistant
   'chat.title': 'AI Olim Chat Yordamchisi',
