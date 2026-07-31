@@ -41,6 +41,12 @@ export interface IARPUnifiedResults {
   spatialData?: IARPSpatialData;
   rawOutputReference?: string;
   summary: string;
+  /**
+   * Solver-level diagnostics distilled from the simulator's own output
+   * (log tail, convergence, warnings/errors, computed values, exported tables).
+   * Carried through so the AI layer can analyze the actual run, not just metrics.
+   */
+  diagnostics?: Record<string, unknown>;
 }
 
 export interface ResultConversionContext {

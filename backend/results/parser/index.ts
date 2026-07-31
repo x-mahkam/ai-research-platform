@@ -14,6 +14,30 @@ export interface ParsedOutputData {
     data: Array<{ x: number; y: number; z?: number }>;
   }>;
   rawText?: string;
+  diagnostics?: Record<string, unknown>;
+}
+
+/**
+ * Solver-diagnostic fields a plugin may emit alongside metrics/curves. Collected
+ * verbatim so the AI layer sees the real run (log tail, convergence, computed
+ * values), rather than only the flattened scalar metrics.
+ */
+export const DIAGNOSTIC_FIELDS = [
+  'solverLog',
+  'warnings',
+  'errors',
+  'converged',
+  'computedValues',
+  'exportedTables',
+  'studySteps',
+] as const;
+
+function collectDiagnostics(data: Record<string, unknown>): Record<string, unknown> | undefined {
+  const diag: Record<string, unknown> = {};
+  for (const key of DIAGNOSTIC_FIELDS) {
+    if (data[key] !== undefined && data[key] !== null) diag[key] = data[key];
+  }
+  return Object.keys(diag).length ? diag : undefined;
 }
 
 export interface IResultParser {
@@ -47,7 +71,7 @@ export class JsonRawResultParser implements IResultParser {
       }
     }
 
-    return { metrics, series, rawText: JSON.stringify(data) };
+    return { metrics, series, rawText: JSON.stringify(data), diagnostics: collectDiagnostics(data) };
   }
 }
 
