@@ -1,12 +1,12 @@
 import { config } from '../../configuration/index.js';
 import { LoggerService } from '../../logging/logger.js';
-import { SYSTEM_PROMPT_CORE } from '../prompts/index.js';
+import { SYSTEM_PROMPT_CORE, SYSTEM_PROMPT_SETUP } from '../prompts/index.js';
 import { agentManager } from '../agents/index.js';
 import { aiMemoryStore } from '../memory/index.js';
 import { aiContextAggregator } from '../context/index.js';
 import { aiProviderRegistry } from '../providers/index.js';
 import { AIProvider } from '../providers/types.js';
-import { GeneratedReport } from '../../shared/types.js';
+import { GeneratedReport, ExperimentSetupProposal, ProposedParameter } from '../../shared/types.js';
 
 export * from './AIResearchEngine.js';
 export * from './GoalEvaluator.js';
@@ -130,6 +130,103 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     logger.info(`AI Engine generating scientific report for experiment ${input.experiment?.id}`);
     const repRes = await agentManager.runReporterAgent(input);
     return repRes.report;
+  }
+
+  /**
+   * Ask the AI to design a concrete, editable experiment setup for a research
+   * objective (parameters to vary, target metrics, method, run estimate). The
+   * user reviews/edits this before the simulation runs. Falls back to a
+   * deterministic, clearly-labeled proposal when no AI provider is configured
+   * or the model output can't be parsed.
+   */
+  public async generateExperimentSetup(input: {
+    objective: string;
+    simulator?: string;
+    providers?: string[];
+  }): Promise<ExperimentSetupProposal> {
+    const provider = aiProviderRegistry.resolveSelection(input.providers)[0];
+    if (!provider) {
+      return this.fallbackSetupProposal(input.simulator, 'No AI provider is configured.');
+    }
+
+    const prompt = `Research objective: ${input.objective}
+Target simulator: ${input.simulator || 'unspecified'}
+
+Design the experiment setup as JSON per your instructions.`;
+
+    try {
+      const text = await provider.generate({
+        system: SYSTEM_PROMPT_SETUP,
+        prompt,
+        maxTokens: config.ai.maxTokens,
+      });
+      const parsed = this.parseSetupJson(text);
+      if (!parsed) {
+        logger.warn(`AI setup output from "${provider.id}" was not parseable JSON; using fallback.`);
+        return this.fallbackSetupProposal(input.simulator, 'The AI response was not valid setup JSON.');
+      }
+      return { ...parsed, provider: provider.id, isAi: true };
+    } catch (err: any) {
+      logger.error(`AI setup generation via "${provider.id}" failed`, { error: err.message });
+      return this.fallbackSetupProposal(input.simulator, `The ${provider.label} call failed: ${err.message}`);
+    }
+  }
+
+  /** Extract and validate the setup JSON from a model response (tolerates code fences / prose). */
+  private parseSetupJson(text: string): Omit<ExperimentSetupProposal, 'provider' | 'isAi'> | null {
+    if (!text) return null;
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end <= start) return null;
+    let raw: any;
+    try {
+      raw = JSON.parse(text.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+    if (!raw || typeof raw !== 'object') return null;
+
+    const parameters: ProposedParameter[] = Array.isArray(raw.parameters)
+      ? raw.parameters
+          .filter((p: any) => p && (p.name || p.key))
+          .map((p: any, i: number) => ({
+            key: String(p.key || p.name || `param_${i}`).trim(),
+            name: String(p.name || p.key || `Parameter ${i + 1}`).trim(),
+            baseline: typeof p.baseline === 'number' || typeof p.baseline === 'string' ? p.baseline : 0,
+            min: typeof p.min === 'number' ? p.min : undefined,
+            max: typeof p.max === 'number' ? p.max : undefined,
+            unit: p.unit ? String(p.unit) : undefined,
+            rationale: p.rationale ? String(p.rationale) : undefined,
+          }))
+      : [];
+
+    if (parameters.length === 0) return null;
+
+    return {
+      summary: String(raw.summary || 'AI-proposed experiment setup.'),
+      parameters,
+      targetMetrics: Array.isArray(raw.targetMetrics) ? raw.targetMetrics.map((m: any) => String(m)) : [],
+      method: String(raw.method || 'parameter sweep'),
+      estimatedRuns: Number.isFinite(raw.estimatedRuns) ? Math.max(1, Math.round(raw.estimatedRuns)) : parameters.length * 5,
+      notes: raw.notes ? String(raw.notes) : undefined,
+    };
+  }
+
+  /** Deterministic, honestly-labeled setup used when the AI isn't available. */
+  private fallbackSetupProposal(simulator: string | undefined, reason: string): ExperimentSetupProposal {
+    return {
+      summary: `Rule-based starter setup (not AI-generated). ${reason} Adjust the parameters below and run, or configure an AI provider for a tailored plan.`,
+      parameters: [
+        { key: 'primary_stimulus', name: 'Primary Bias / Stimulus', baseline: 0.7, min: 0, max: 2, unit: 'V', rationale: 'Sweep the main driving stimulus.' },
+        { key: 'ambient_temp', name: 'Ambient Temperature', baseline: 300, min: 250, max: 400, unit: 'K', rationale: 'Assess thermal sensitivity.' },
+      ],
+      targetMetrics: ['Primary Output', 'Convergence'],
+      method: 'parameter sweep',
+      estimatedRuns: 10,
+      notes: simulator ? `Target simulator: ${simulator}.` : undefined,
+      provider: 'fallback',
+      isAi: false,
+    };
   }
 
   /** Single-provider path: call the model, fall back honestly on failure. */

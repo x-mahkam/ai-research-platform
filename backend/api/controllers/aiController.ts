@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { aiService, AIService } from '../../services/aiService.js';
 import { validateAIChatDTO, validateAIReportDTO } from '../dto/aiDTO.js';
 import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
+import { ValidationError } from '../../shared/errors.js';
 
 export class AIController {
   constructor(private service: AIService = aiService) {}
@@ -67,6 +68,23 @@ export class AIController {
       const { query } = req.query;
       const topics = await this.service.queryKnowledge((query as string) || '');
       res.json({ topics });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public planSetup = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { objective, simulator, providers } = req.body || {};
+      if (!objective || typeof objective !== 'string') {
+        throw new ValidationError('A research objective is required to plan an experiment setup.');
+      }
+      const setup = await this.service.planSetup({
+        objective,
+        simulator: typeof simulator === 'string' ? simulator : undefined,
+        providers: Array.isArray(providers) ? providers.filter((p: unknown) => typeof p === 'string') : undefined,
+      });
+      res.json(setup);
     } catch (err) {
       next(err);
     }

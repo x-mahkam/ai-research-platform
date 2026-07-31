@@ -1,5 +1,5 @@
 import { aiEngineOrchestrator, AIEngineOrchestrator } from '../ai/engine/index.js';
-import { GeneratedReport } from '../shared/types.js';
+import { GeneratedReport, ExperimentSetupProposal } from '../shared/types.js';
 
 export interface AIChatInput {
   prompt: string;
@@ -52,6 +52,14 @@ export class AIEngine {
 
   public async generateScientificReport(input: AIReportInput): Promise<GeneratedReport> {
     return await this.orchestrator.generateScientificReport(input);
+  }
+
+  public async generateExperimentSetup(input: {
+    objective: string;
+    simulator?: string;
+    providers?: string[];
+  }): Promise<ExperimentSetupProposal> {
+    return await this.orchestrator.generateExperimentSetup(input);
   }
 }
 

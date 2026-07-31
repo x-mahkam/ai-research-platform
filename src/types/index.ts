@@ -106,6 +106,31 @@ export interface ExperimentNote {
   version: number;
 }
 
+// A single parameter the AI proposes to vary in an experiment run.
+export interface ProposedParameter {
+  key: string;
+  name: string;
+  baseline: number | string;
+  min?: number;
+  max?: number;
+  unit?: string;
+  rationale?: string;
+}
+
+// The AI's proposed experiment setup, shown to the user to review/edit and
+// confirm before the simulation runs. `isAi` is false when this came from the
+// deterministic fallback (no AI provider configured) rather than a real model.
+export interface ExperimentSetupProposal {
+  summary: string;
+  parameters: ProposedParameter[];
+  targetMetrics: string[];
+  method: string;
+  estimatedRuns: number;
+  notes?: string;
+  provider: string;
+  isAi: boolean;
+}
+
 export interface Experiment {
   id: string;
   projectId: string;
