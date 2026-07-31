@@ -17,6 +17,7 @@ import {
   Clock,
   History,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface SchedulerWorker {
@@ -446,6 +447,19 @@ export const SimulationQueueView: React.FC<SimulationQueueViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Failure reason — the real error, surfaced prominently */}
+            {(selectedJob.status === 'Failed' || selectedJob.error) && selectedJob.error && (
+              <div className="bg-red-950/50 border border-red-800/70 rounded-xl p-4 space-y-1">
+                <div className="flex items-center gap-2 text-red-300 text-xs font-bold uppercase tracking-wider">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Simulation failed</span>
+                </div>
+                <p className="text-[12px] text-red-200 font-mono leading-relaxed whitespace-pre-wrap break-words">
+                  {selectedJob.error}
+                </p>
+              </div>
+            )}
 
             {/* Navigation Tabs: Live Console | Worker Pool Nodes | Audit History */}
             <div className="flex border-b border-slate-800 space-x-4 text-xs font-medium">
