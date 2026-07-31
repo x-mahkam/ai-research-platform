@@ -6,6 +6,11 @@ name: Build Windows package
 #   - manual "Run workflow"   -> builds and uploads the zip as a run artifact
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create/update (e.g. v0.1.0)'
+        required: true
+        default: 'v0.1.0'
   push:
     tags:
       - 'v*'
@@ -61,13 +66,19 @@ jobs:
           name: ai-research-platform-windows
           path: ai-research-platform-windows.zip
 
-      - name: Publish GitHub Release (tags only)
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Publish GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create $env:GITHUB_REF_NAME `
-            ai-research-platform-windows.zip `
-            --title "AI Research Platform $env:GITHUB_REF_NAME" `
-            --notes "Self-contained Windows package. Download the zip, unzip it, and double-click Start-ARP.bat — Node is bundled, nothing to install. See README-INSTALL.txt inside for enabling AI providers and pointing at your COMSOL install."
+          if ($env:GITHUB_REF -like 'refs/tags/*') { $tag = $env:GITHUB_REF_NAME }
+          else { $tag = '${{ github.event.inputs.tag }}' }
+          $notes = "Self-contained Windows package. Download the zip, unzip it, and double-click Start-ARP.bat - Node is bundled, nothing to install. See README-INSTALL.txt inside for enabling AI providers and pointing at your COMSOL install."
+          gh release view $tag 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag exists; uploading asset."
+            gh release upload $tag ai-research-platform-windows.zip --clobber
+          } else {
+            Write-Host "Creating release $tag."
+            gh release create $tag ai-research-platform-windows.zip --target $env:GITHUB_SHA --title "AI Research Platform $tag" --notes $notes
+          }
