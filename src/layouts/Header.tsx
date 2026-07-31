@@ -11,7 +11,9 @@ import {
   Activity,
   CheckCircle2,
   Clock,
+  Languages,
 } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface HeaderProps {
   projects: Project[];
@@ -36,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   onQuickRunSimulation,
   runningJobCount,
 }) => {
+  const { t, lang, setLang } = useI18n();
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const filteredExperiments = experiments.filter((e) => e.projectId === activeProjectId);
   const activeExperiment = experiments.find((e) => e.id === activeExperimentId);
@@ -55,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
                 ARP-010
               </span>
             </div>
-            <p className="text-xs text-slate-400 font-sans">Multi-Physics Simulation Engine</p>
+            <p className="text-xs text-slate-400 font-sans">{t('header.subtitle')}</p>
           </div>
         </div>
 
@@ -65,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div id="header-context-selectors" className="hidden lg:flex items-center space-x-3 text-xs">
           <div className="flex items-center space-x-1.5 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
             <Layers className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-slate-400">Project:</span>
+            <span className="text-slate-400">{t('header.project')}</span>
             <select
               value={activeProjectId || ''}
               onChange={(e) => onSelectProject(e.target.value)}
@@ -81,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center space-x-1.5 bg-slate-800/80 px-3 py-1.5 rounded-md border border-slate-700">
             <FlaskConical className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-slate-400">Experiment:</span>
+            <span className="text-slate-400">{t('header.experiment')}</span>
             <select
               value={activeExperimentId || ''}
               onChange={(e) => onSelectExperiment(e.target.value)}
@@ -94,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </option>
                 ))
               ) : (
-                <option value="">No experiments</option>
+                <option value="">{t('header.noExperiments')}</option>
               )}
             </select>
           </div>
@@ -111,12 +114,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
               </span>
-              <span className="text-cyan-300 font-mono font-medium">{runningJobCount} Sentaurus Job Running</span>
+              <span className="text-cyan-300 font-mono font-medium">{t('header.jobsRunning', { n: runningJobCount })}</span>
             </>
           ) : (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-slate-300 font-mono">TCAD Engine Idle</span>
+              <span className="text-slate-300 font-mono">{t('header.engineIdle')}</span>
             </>
           )}
         </div>
@@ -124,7 +127,24 @@ export const Header: React.FC<HeaderProps> = ({
         {/* AI Assistant Status */}
         <div id="header-ai-badge" className="hidden sm:flex items-center space-x-1.5 bg-cyan-950/60 text-cyan-300 px-3 py-1.5 rounded-full border border-cyan-800 text-xs">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          <span className="font-medium">AI Scientist Active</span>
+          <span className="font-medium">{t('header.aiActive')}</span>
+        </div>
+
+        {/* Language switcher (UZ / EN) */}
+        <div id="header-lang-switch" className="flex items-center rounded-md border border-slate-700 overflow-hidden text-[11px] font-semibold" title={t('lang.label')}>
+          <Languages className="w-3.5 h-3.5 text-slate-400 mx-1.5" />
+          <button
+            onClick={() => setLang('uz')}
+            className={`px-2 py-1.5 cursor-pointer transition ${lang === 'uz' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+          >
+            {t('lang.uz')}
+          </button>
+          <button
+            onClick={() => setLang('en')}
+            className={`px-2 py-1.5 cursor-pointer transition ${lang === 'en' ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+          >
+            {t('lang.en')}
+          </button>
         </div>
 
         {/* Action Buttons */}
@@ -134,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">New Exp</span>
+          <span className="hidden sm:inline">{t('header.newExp')}</span>
         </button>
 
         <button
@@ -143,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center space-x-1.5 bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-1.5 rounded-md text-xs font-medium transition shadow-sm cursor-pointer"
         >
           <Play className="w-3.5 h-3.5 fill-current" />
-          <span>Run Simulation</span>
+          <span>{t('header.runSimulation')}</span>
         </button>
       </div>
     </header>

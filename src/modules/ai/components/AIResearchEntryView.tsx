@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Project, Experiment, SimulatorPlugin } from '../../../types';
 import { apiClient } from '../../../services/apiClient';
+import { useI18n } from '../../../i18n';
 
 interface AIResearchEntryViewProps {
   plugins: SimulatorPlugin[];
@@ -42,6 +43,7 @@ export const AIResearchEntryView: React.FC<AIResearchEntryViewProps> = ({
   recentExperiments,
   onSelectExperiment,
 }) => {
+  const { t } = useI18n();
   const [objective, setObjective] = useState('');
   const [step, setStep] = useState<'prompt' | 'analysis' | 'model_select' | 'confirm'>('prompt');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -214,30 +216,30 @@ File {
             </div>
             <div>
               <span className="text-[11px] font-mono text-cyan-400 uppercase tracking-widest block font-bold">
-                AI Scientific Orchestration Engine
+                {t('entry.badge')}
               </span>
               <h1 className="text-2xl font-black text-white tracking-tight">
-                AI Autonomous Research Agent
+                {t('entry.title')}
               </h1>
             </div>
           </div>
 
           <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
-            State your scientific objective. The AI Agent will analyze the target physics, select the real numerical simulator executable, configure parameter bounds, and execute autonomous optimization loops.
+            {t('entry.desc')}
           </p>
 
           <div className="flex items-center space-x-6 pt-2 text-[11px] text-slate-400 font-mono">
             <span className="flex items-center space-x-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Real Software Execution</span>
+              <span>{t('entry.tag.realExec')}</span>
             </span>
             <span className="flex items-center space-x-1.5">
               <Atom className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Zero Synthetic Approximations</span>
+              <span>{t('entry.tag.zero')}</span>
             </span>
             <span className="flex items-center space-x-1.5">
               <Zap className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Autonomous Parameter Sweeps</span>
+              <span>{t('entry.tag.sweeps')}</span>
             </span>
           </div>
         </div>
@@ -255,9 +257,9 @@ File {
             <label className="block text-sm font-bold text-white flex items-center justify-between">
               <span className="flex items-center space-x-2">
                 <Brain className="w-4 h-4 text-cyan-400" />
-                <span>What research do you want to perform?</span>
+                <span>{t('entry.question')}</span>
               </span>
-              <span className="text-xs font-mono text-slate-400 font-normal">Step 1 of 3</span>
+              <span className="text-xs font-mono text-slate-400 font-normal">{t('entry.step1of3')}</span>
             </label>
             <div className="relative">
               <textarea
@@ -265,7 +267,7 @@ File {
                 rows={4}
                 value={objective}
                 onChange={(e) => setObjective(e.target.value)}
-                placeholder="e.g. Optimize gate workfunction and channel doping in Synopsys Sentaurus TCAD to minimize subthreshold leakage below 60 mV/dec..."
+                placeholder={t('entry.placeholder')}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 font-medium leading-relaxed resize-none transition"
               />
               <button
@@ -274,7 +276,7 @@ File {
                 disabled={!objective.trim()}
                 className="absolute bottom-3 right-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-lg flex items-center space-x-2 shadow-lg cursor-pointer transition"
               >
-                <span>Analyze Scientific Objective</span>
+                <span>{t('entry.analyzeBtn')}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -283,7 +285,7 @@ File {
           {/* Quick Preset Prompts */}
           <div className="space-y-3 pt-2 border-t border-slate-800/80">
             <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block font-semibold">
-              Or Choose a Preset Scientific Goal:
+              {t('entry.presets')}
             </span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {presetObjectives.map((preset, idx) => (
@@ -311,9 +313,9 @@ File {
             <div className="pt-4 border-t border-slate-800/80 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block font-semibold">
-                  Recent Active Experiments
+                  {t('entry.recent')}
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">Select to resume live monitor</span>
+                <span className="text-[10px] text-slate-500 font-mono">{t('entry.recentHint')}</span>
               </div>
               <div className="space-y-2">
                 {recentExperiments.slice(0, 3).map((exp) => (
@@ -326,11 +328,11 @@ File {
                       <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                       <div>
                         <div className="font-bold text-white">{exp.title}</div>
-                        <div className="text-[11px] text-slate-400">Simulator: {exp.simulator}</div>
+                        <div className="text-[11px] text-slate-400">{t('entry.simulator')} {exp.simulator}</div>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
-                      View Execution &rarr;
+                      {t('entry.viewExecution')} &rarr;
                     </span>
                   </div>
                 ))}
@@ -347,9 +349,9 @@ File {
             <RefreshCw className="w-8 h-8 animate-spin" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-white">Analyzing Scientific Objective...</h3>
+            <h3 className="text-lg font-bold text-white">{t('entry.analyzing')}</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto">
-              The backend planning engine is selecting a numerical solver and proposing initial parameters.
+              {t('entry.analyzingHint')}
             </p>
           </div>
         </div>
@@ -366,9 +368,9 @@ File {
                 </div>
                 <div>
                   <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold block">
-                    AI Objective Analysis Complete
+                    {t('entry.analysisComplete')}
                   </span>
-                  <h3 className="text-sm font-bold text-white">Target Simulator Identified</h3>
+                  <h3 className="text-sm font-bold text-white">{t('entry.targetIdentified')}</h3>
                 </div>
               </div>
               <button
@@ -376,22 +378,22 @@ File {
                 className="text-xs text-slate-400 hover:text-white underline cursor-pointer flex items-center space-x-1"
               >
                 <RotateCcw className="w-3 h-3" />
-                <span>Change Objective</span>
+                <span>{t('entry.changeObjective')}</span>
               </button>
             </div>
 
             {/* Selected Simulator Badge */}
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div>
-                <span className="text-[10px] text-slate-500 font-mono block uppercase">Selected Simulator Engine</span>
+                <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('entry.selectedEngine')}</span>
                 <span className="font-bold text-cyan-300 text-sm">{analyzedData.recommendedSimulator.name}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 font-mono block uppercase">Physics Domain</span>
+                <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('entry.physicsDomain')}</span>
                 <span className="font-semibold text-slate-200">{analyzedData.detectedDomain}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 font-mono block uppercase">Model Format</span>
+                <span className="text-[10px] text-slate-500 font-mono block uppercase">{t('entry.modelFormat')}</span>
                 <span className="font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded text-[11px] inline-block mt-0.5">
                   {(analyzedData.recommendedSimulator.capabilities?.supportedFileTypes || ['.cmd'])
                     .map((t) => `*${t}`)
@@ -410,10 +412,10 @@ File {
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-white flex items-center space-x-2">
                 <FileCode className="w-4 h-4 text-cyan-400" />
-                <span>Do you already have a scientific model file for this research?</span>
+                <span>{t('entry.haveModelQ')}</span>
               </h3>
               <p className="text-xs text-slate-400">
-                Upload your existing model file, or let the AI Agent attach an optimized starter template.
+                {t('entry.haveModelHint')}
               </p>
             </div>
 
@@ -430,12 +432,12 @@ File {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Upload className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-bold text-white">YES — Upload Model File</span>
+                    <span className="text-xs font-bold text-white">{t('entry.yesUpload')}</span>
                   </div>
                   {hasExistingModel === true && <Check className="w-4 h-4 text-cyan-400" />}
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  I have an existing file (e.g. .mph, .cmd, .py, .fsp, .in, .m, .foam) ready for parameter injection.
+                  {t('entry.yesUploadHint')}
                 </p>
               </div>
 
@@ -454,12 +456,12 @@ File {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-bold text-white">NO — Generate Template</span>
+                    <span className="text-xs font-bold text-white">{t('entry.noTemplate')}</span>
                   </div>
                   {hasExistingModel === false && <Check className="w-4 h-4 text-cyan-400" />}
                 </div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  The AI Agent will automatically generate a standard starter script template for {analyzedData.recommendedSimulator.name}.
+                  {t('entry.noTemplateHint', { name: analyzedData.recommendedSimulator.name })}
                 </p>
               </div>
             </div>
@@ -468,7 +470,7 @@ File {
             {hasExistingModel === true && (
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <label className="block text-xs font-semibold text-slate-300">
-                  Select Model File from Local Storage:
+                  {t('entry.selectFromStorage')}
                 </label>
                 <input
                   type="file"
@@ -477,8 +479,8 @@ File {
                 />
                 {uploadedFileName && (
                   <div className="p-2.5 bg-cyan-950 border border-cyan-800 rounded-lg text-xs text-cyan-300 font-mono flex items-center justify-between">
-                    <span>Loaded: {uploadedFileName}</span>
-                    <span className="text-[10px] text-emerald-400">Ready</span>
+                    <span>{t('entry.loaded', { name: uploadedFileName })}</span>
+                    <span className="text-[10px] text-emerald-400">{t('entry.ready')}</span>
                   </div>
                 )}
               </div>
@@ -493,7 +495,7 @@ File {
                   className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs px-6 py-3 rounded-xl flex items-center space-x-2 shadow-xl cursor-pointer transition transform active:scale-95"
                 >
                   <Play className="w-4 h-4 fill-white" />
-                  <span>Launch Autonomous Scientific Research</span>
+                  <span>{t('entry.launch')}</span>
                 </button>
               </div>
             )}

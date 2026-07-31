@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, SimulatorPlugin, Experiment, ModelFile } from '../../../types';
 import { apiClient } from '../../../services/apiClient';
+import { useI18n } from '../../../i18n';
 import {
   FlaskConical,
   X,
@@ -32,6 +33,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
   activeProjectId,
   onCreateExperiment,
 }) => {
+  const { t } = useI18n();
   const [projectId, setProjectId] = useState<string>(activeProjectId || projects[0]?.id || '');
   const [projectModels, setProjectModels] = useState<ModelFile[]>([]);
   const [loadingModels, setLoadingModels] = useState<boolean>(false);
@@ -253,7 +255,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
           <div className="flex items-center space-x-2">
             <FlaskConical className="w-5 h-5 text-cyan-400" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Execute Model Experiment
+              {t('modal.title')}
             </h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white cursor-pointer">
@@ -265,22 +267,22 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
           {/* Active Project Context */}
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
             <div>
-              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider block">Active Research Project</span>
-              <span className="text-xs font-bold text-cyan-300">{selectedProject?.title || 'Active Research Project'}</span>
+              <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider block">{t('modal.activeProject')}</span>
+              <span className="text-xs font-bold text-cyan-300">{selectedProject?.title || t('modal.activeProject')}</span>
             </div>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">
-              {selectedProject?.simulator || 'Universal Simulator'}
+              {selectedProject?.simulator || t('modal.universalSimulator')}
             </span>
           </div>
 
           {/* Select Model File inside Project */}
           <div>
             <div className="block text-slate-300 font-medium mb-1 flex items-center justify-between">
-              <span>Select Scientific Model File *</span>
+              <span>{t('modal.selectModel')}</span>
               {loadingModels && (
                 <span className="text-[11px] text-cyan-400 flex items-center space-x-1">
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>Fetching models...</span>
+                  <span>{t('modal.fetchingModels')}</span>
                 </span>
               )}
             </div>
@@ -289,9 +291,9 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-lg text-amber-300 flex items-start space-x-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-semibold text-xs">No Scientific Model Files in This Project Yet</p>
+                  <p className="font-semibold text-xs">{t('modal.noModelsTitle')}</p>
                   <p className="text-[11px] text-amber-300/80">
-                    Upload a model file (.mph, .cmd, .in, .py, .fsp) from your computer using the button below to run an experiment.
+                    {t('modal.noModelsHint')}
                   </p>
                 </div>
               </div>
@@ -320,12 +322,12 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               {uploading ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Uploading model…</span>
+                  <span>{t('modal.uploading')}</span>
                 </>
               ) : (
                 <>
                   <FileCode className="w-3.5 h-3.5" />
-                  <span>Upload model file from your computer</span>
+                  <span>{t('modal.uploadBtn')}</span>
                 </>
               )}
               <input
@@ -345,7 +347,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                   type="text"
                   value={modelPath}
                   onChange={(e) => setModelPath(e.target.value)}
-                  placeholder="…or full path on this computer, e.g. D:\\models\\heatsink.mph"
+                  placeholder={t('modal.pathPlaceholder')}
                   className="flex-1 bg-slate-800 border border-slate-700 rounded-lg p-2 text-[11px] text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
                 />
                 <button
@@ -354,12 +356,11 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                   disabled={uploading || !modelPath.trim()}
                   className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap"
                 >
-                  Use file path
+                  {t('modal.useFilePath')}
                 </button>
               </div>
               <p className="text-[10px] text-slate-500">
-                Recommended for COMSOL .mph and other large/binary models — the file is read in
-                place when the platform runs on the same machine as the solver.
+                {t('modal.pathHint')}
               </p>
             </div>
 
@@ -374,16 +375,16 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                 <span className="text-[11px] font-semibold text-cyan-400 flex items-center space-x-1">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Auto-Detected Execution Specifications</span>
+                  <span>{t('modal.autoDetected')}</span>
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800">
-                  VERIFIED MODEL
+                  {t('modal.verifiedModel')}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-400 text-[11px] block">Simulator Platform:</span>
+                  <span className="text-slate-400 text-[11px] block">{t('modal.simulatorPlatform')}</span>
                   <span className="text-slate-100 font-semibold flex items-center space-x-1 mt-0.5">
                     <Cpu className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{selectedModel.simulator}</span>
@@ -391,7 +392,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                 </div>
 
                 <div>
-                  <span className="text-slate-400 text-[11px] block">Physics Module:</span>
+                  <span className="text-slate-400 text-[11px] block">{t('modal.physicsModule')}</span>
                   <span className="text-slate-100 font-semibold flex items-center space-x-1 mt-0.5">
                     <Layers className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{selectedModel.physicsModule}</span>
@@ -400,9 +401,9 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               </div>
 
               <div className="pt-1 text-[11px] font-mono text-slate-400 border-t border-slate-800/60 flex items-center justify-between">
-                <span>Workspace Isolation:</span>
+                <span>{t('modal.workspaceIsolation')}</span>
                 <span className="text-cyan-300">
-                  /workspaces/exp-run/{selectedModel.fileName} (Original file unchanged)
+                  /workspaces/exp-run/{selectedModel.fileName} {t('modal.originalUnchanged')}
                 </span>
               </div>
             </div>
@@ -411,14 +412,14 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
           {/* Step 4: Experiment Title */}
           <div>
             <label className="block text-slate-300 font-medium mb-1">
-              3. Experiment Title *
+              {t('modal.experimentTitle')}
             </label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. 3nm Nanosheet I-V Transport Sweep"
+              placeholder={t('modal.titlePlaceholder')}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
             />
           </div>
@@ -426,20 +427,20 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
           {/* Step 5: Research Goal & Notes */}
           <div>
             <label className="block text-slate-300 font-medium mb-1">
-              4. Research Goal & Simulation Notes
+              {t('modal.researchGoal')}
             </label>
             <textarea
               rows={2}
               value={researchGoal}
               onChange={(e) => setResearchGoal(e.target.value)}
-              placeholder="Specific scientific objective for this simulation run..."
+              placeholder={t('modal.goalPlaceholder')}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"
             />
           </div>
 
           {/* Tags */}
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Tags (comma separated)</label>
+            <label className="block text-slate-300 font-medium mb-1">{t('modal.tags')}</label>
             <input
               type="text"
               value={tagsInput}
@@ -452,12 +453,11 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
           <div>
             <label className="block text-slate-300 font-medium mb-1 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>AI Engine for this experiment</span>
+              <span>{t('modal.aiEngine')}</span>
             </label>
             {aiProviders.length === 0 ? (
               <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-[11px] text-slate-400">
-                No AI provider is configured. Set an API key (e.g. <span className="font-mono text-cyan-300">GEMINI_API_KEY</span>)
-                in your <span className="font-mono">.env</span> to enable AI analysis. The experiment still runs without it.
+                {t('modal.noProvider')}
               </div>
             ) : (
               <>
@@ -486,8 +486,8 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                 </div>
                 <p className="mt-1 text-[10px] text-slate-500">
                   {selectedProviders.length > 1
-                    ? `Ensemble mode: all ${selectedProviders.length} models answer, then results are combined.`
-                    : 'Pick one, or select several to compare their answers and get a combined conclusion.'}
+                    ? t('modal.ensembleHint', { n: selectedProviders.length })
+                    : t('modal.pickHint')}
                 </p>
               </>
             )}
@@ -500,7 +500,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-medium cursor-pointer"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -511,7 +511,7 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
-              Run Experiment
+              {t('modal.runExperiment')}
             </button>
           </div>
         </form>
