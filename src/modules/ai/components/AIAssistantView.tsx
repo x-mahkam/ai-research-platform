@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../../../i18n';
 import { AutonomousResearchPanel } from './AutonomousResearchPanel';
+import { ModelRebuildPanel } from './ModelRebuildPanel';
 
 interface AIAssistantViewProps {
   experiment: Experiment;
@@ -251,6 +252,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
       {/* Autonomous research sweep */}
       <AutonomousResearchPanel experiment={experiment} />
+
+      {/* Experimental: AI rebuilds the model structure via COMSOL LiveLink */}
+      <ModelRebuildPanel experiment={experiment} />
 
       {/* Preset Prompts */}
       <div className="flex flex-wrap gap-2">
