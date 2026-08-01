@@ -248,12 +248,6 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
-    const defaultParameters = [
-      { key: 'primary_stimulus', name: 'Primary Bias / Sweep Voltage', value: 0.7, unit: 'V', min: 0.0, max: 2.0, group: 'Bias' },
-      { key: 'ambient_temp', name: 'Ambient Temperature', value: 300, unit: 'K', min: 200, max: 450, group: 'Environment' },
-      { key: 'solver_tolerance', name: 'Solver Relative Tolerance', value: '1e-5', unit: '-', group: 'Numerical' },
-    ];
-
     onCreateExperiment({
       projectId,
       modelId: selectedModel.id,
@@ -265,7 +259,8 @@ export const NewExperimentModal: React.FC<NewExperimentModalProps> = ({
       description: description || `Execution sweep on ${selectedModel.fileName} using ${selectedModel.simulator}`,
       pluginId: 'plugin-auto',
       status: 'Ready',
-      parameters: defaultParameters,
+      // Do not fabricate generic parameters — the server recovers the model's
+      // real COMSOL Global Parameters from its .mph, or leaves the list empty.
       tags: tags.length > 0 ? tags : [selectedModel.simulator, selectedModel.physicsModule],
       createdBy: 'Dr. Jasur Alimov',
       aiProviders: selectedProviders.length > 0 ? selectedProviders : undefined,

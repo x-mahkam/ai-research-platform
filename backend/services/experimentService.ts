@@ -6,6 +6,7 @@ import { Experiment } from '../shared/types.js';
 import { NotFoundError, ValidationError } from '../shared/errors.js';
 import { generateId, getCurrentTimestamp } from '../shared/utils.js';
 import { eventBus, DomainEventType } from '../events/eventEmitter.js';
+import { extractParametersFromMph } from '../comsol/ComsolModelParameters.js';
 
 export class ExperimentService {
   constructor(
@@ -53,6 +54,18 @@ export class ExperimentService {
     const physicsModule = expData.physicsModule || selectedModel.physicsModule || 'Heat Transfer';
     const workspacePath = `/workspaces/experiments/${expId}/${selectedModel.fileName}`;
 
+    // Parameters shown for the experiment should reflect THIS model, not a
+    // fixed placeholder. Prefer client-supplied parameters; otherwise try to
+    // recover the model's real COMSOL Global Parameters from its .mph file.
+    // If neither is available, leave the list empty (honest) rather than
+    // fabricating identical defaults for every project.
+    let parameters = expData.parameters;
+    if (!parameters || parameters.length === 0) {
+      const modelPath = (selectedModel as { absolutePath?: string }).absolutePath;
+      const recovered = modelPath && /\.mph$/i.test(modelPath) ? extractParametersFromMph(modelPath) : [];
+      parameters = recovered.length ? recovered : [];
+    }
+
     const newExp: Experiment = {
       // Client-supplied fields first; server-owned fields below must win —
       // otherwise a request body carrying e.g. an existing "id" silently
@@ -69,10 +82,7 @@ export class ExperimentService {
       physicsModule,
       researchGoal: expData.researchGoal || selectedModel.description || 'Scientific simulation sweep',
       workspacePath,
-      parameters: expData.parameters || [
-        { key: 'param_bias', name: 'Primary Bias / Stimulus', value: 0.7, unit: 'V', group: 'Boundary Conditions' },
-        { key: 'param_temp', name: 'Ambient Temperature', value: 300, unit: 'K', group: 'Thermal' },
-      ],
+      parameters,
       createdBy: expData.createdBy || 'Dr. Jasur Alimov',
       id: expId,
       projectId,
