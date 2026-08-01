@@ -184,6 +184,31 @@ export interface SimulationJob {
   parameters?: Record<string, unknown>;
 }
 
+export interface AutoLoopPoint {
+  value: string | number;
+  jobId?: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  objective?: number | null;
+  metrics?: Record<string, string | number>;
+  error?: string;
+}
+
+export interface AutonomousRun {
+  id: string;
+  experimentId: string;
+  parameter: string;
+  objectiveMetric?: string;
+  goal?: string;
+  providers?: string[];
+  status: 'running' | 'concluding' | 'completed' | 'failed' | 'stopped';
+  points: AutoLoopPoint[];
+  currentIndex: number;
+  conclusion?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PluginCapabilities {
   supports2DMesh: boolean;
   supports3D: boolean;
