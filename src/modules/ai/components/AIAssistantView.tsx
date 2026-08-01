@@ -13,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useI18n } from '../../../i18n';
+import { AutonomousResearchPanel } from './AutonomousResearchPanel';
 
 interface AIAssistantViewProps {
   experiment: Experiment;
@@ -187,6 +188,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Autonomous research sweep */}
+      <AutonomousResearchPanel experiment={experiment} />
 
       {/* Preset Prompts */}
       <div className="flex flex-wrap gap-2">

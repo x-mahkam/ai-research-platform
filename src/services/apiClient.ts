@@ -1,4 +1,4 @@
-import { Project, Experiment, SimulationJob, SimulatorPlugin, OptimizationJob, GeneratedReport, ModelFile } from '../types';
+import { Project, Experiment, SimulationJob, SimulatorPlugin, OptimizationJob, GeneratedReport, ModelFile, AutonomousRun } from '../types';
 
 export class ApiClient {
   public async getProjects(): Promise<Project[]> {
@@ -268,6 +268,38 @@ export class ApiClient {
       body: JSON.stringify({ experimentId }),
     });
     if (!res.ok) throw new Error('Failed to run simulation');
+    return res.json();
+  }
+
+  public async startAutoResearch(input: {
+    experimentId: string;
+    parameter: string;
+    values: Array<string | number>;
+    objectiveMetric?: string;
+    goal?: string;
+    providers?: string[];
+  }): Promise<AutonomousRun> {
+    const res = await fetch('/api/ai/auto-research', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to start autonomous research');
+    }
+    return res.json();
+  }
+
+  public async getAutoResearch(runId: string): Promise<AutonomousRun> {
+    const res = await fetch(`/api/ai/auto-research/${runId}`);
+    if (!res.ok) throw new Error('Failed to load autonomous run');
+    return res.json();
+  }
+
+  public async stopAutoResearch(runId: string): Promise<AutonomousRun> {
+    const res = await fetch(`/api/ai/auto-research/${runId}/stop`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to stop autonomous run');
     return res.json();
   }
 
