@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Experiment, ChatMessage } from '../../../types';
 import {
   Sparkles,
@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Brain,
   Lightbulb,
+  Trash2,
 } from 'lucide-react';
 import { useI18n } from '../../../i18n';
 
@@ -28,17 +29,56 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   // the solver (e.g. COMSOL) can model any physics: heat, fluids, EM, structural…
   const physics = experiment.physicsModule || experiment.simulator || t('chat.physicsFallback');
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'msg-1',
-      sender: 'assistant',
-      text: t('chat.welcome', { title: experiment.title }),
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
+  // Persist the conversation per experiment so switching pages (which unmounts
+  // this view) doesn't wipe the chat. Restored on mount; saved on every change.
+  const storageKey = `arp.chat.${experiment.id}`;
+  const draftKey = `arp.chat.draft.${experiment.id}`;
 
-  const [inputPrompt, setInputPrompt] = useState('');
+  const welcomeMessage = (): ChatMessage => ({
+    id: 'msg-1',
+    sender: 'assistant',
+    text: t('chat.welcome', { title: experiment.title }),
+    timestamp: new Date().toLocaleTimeString(),
+  });
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ChatMessage[];
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      }
+    } catch {
+      // ignore corrupt/unavailable storage
+    }
+    return [welcomeMessage()];
+  });
+
+  const [inputPrompt, setInputPrompt] = useState(() => {
+    try {
+      return localStorage.getItem(draftKey) || '';
+    } catch {
+      return '';
+    }
+  });
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch {
+      // ignore storage write failures (quota/private mode)
+    }
+  }, [messages, storageKey]);
+
+  useEffect(() => {
+    try {
+      if (inputPrompt) localStorage.setItem(draftKey, inputPrompt);
+      else localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+  }, [inputPrompt, draftKey]);
 
   const promptPresets = [
     t('chat.preset.physics', { physics }),
@@ -46,6 +86,17 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
     t('chat.preset.results'),
     t('chat.preset.next'),
   ];
+
+  const handleClearChat = () => {
+    setMessages([welcomeMessage()]);
+    setInputPrompt('');
+    try {
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(draftKey);
+    } catch {
+      // ignore
+    }
+  };
 
   const handleSendMessage = async (textToSend?: string) => {
     const prompt = textToSend || inputPrompt;
@@ -122,8 +173,18 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
           </p>
         </div>
 
-        <div className="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono text-cyan-300 shrink-0">
-          {t('chat.context')}: {experiment.title}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800 text-xs font-mono text-cyan-300">
+            {t('chat.context')}: {experiment.title}
+          </div>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            title={t('chat.clear')}
+            className="bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 p-1.5 rounded-lg transition cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
