@@ -465,6 +465,11 @@ export default function App() {
                 />
               ) : activeExperiment ? (
                 <AIAssistantView
+                  // Keying by experiment id remounts the view when the active
+                  // experiment changes, so the per-experiment chat (and its
+                  // persisted state) is reloaded fresh instead of showing — or
+                  // overwriting storage with — the previous experiment's thread.
+                  key={activeExperiment.id}
                   experiment={activeExperiment}
                   onApplySuggestedParameters={(params) => {
                     const updatedParams = activeExperiment.parameters.map((p) => {
