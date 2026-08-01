@@ -4,6 +4,8 @@ import { validateAIChatDTO, validateAIReportDTO } from '../dto/aiDTO.js';
 import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
 import { ValidationError } from '../../shared/errors.js';
 import { updateProviderKeys, getComsolStatus, updateComsolPath } from '../../settings/apiKeys.js';
+import { autonomousLoopService } from '../../ai/autoloop/index.js';
+import { validateParameterOverrides, assertSafeId } from '../dto/simulationDTO.js';
 
 export class AIController {
   constructor(private service: AIService = aiService) {}
@@ -115,6 +117,61 @@ export class AIController {
       const keys = req.body && typeof req.body === 'object' ? (req.body as Record<string, string>) : {};
       updateProviderKeys(keys);
       res.json(this.service.listProviders());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public startAutoResearch = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body || {};
+      const experimentId = assertSafeId(body.experimentId, 'experimentId');
+      const parameter = typeof body.parameter === 'string' ? body.parameter.trim() : '';
+      if (!parameter) {
+        throw new ValidationError('A COMSOL parameter name to sweep is required.');
+      }
+      // Reuse the same value validation as run-time overrides (no commas, etc.).
+      const rawValues = Array.isArray(body.values) ? body.values : [];
+      const values: Array<string | number> = [];
+      for (const v of rawValues) {
+        const checked = validateParameterOverrides({ [parameter]: v });
+        if (checked) values.push(checked[parameter]);
+      }
+      if (!values.length) {
+        throw new ValidationError('Provide at least one valid parameter value to sweep.');
+      }
+      const providers = Array.isArray(body.providers)
+        ? body.providers.filter((p: unknown): p is string => typeof p === 'string')
+        : undefined;
+      const run = autonomousLoopService.start({
+        experimentId,
+        parameter,
+        values,
+        objectiveMetric: typeof body.objectiveMetric === 'string' ? body.objectiveMetric : undefined,
+        goal: typeof body.goal === 'string' ? body.goal : undefined,
+        providers,
+      });
+      res.status(201).json(run);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getAutoResearch = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const run = autonomousLoopService.getStatus(req.params.id);
+      if (!run) return res.status(404).json({ error: 'Autonomous run not found.' });
+      res.json(run);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public stopAutoResearch = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const run = autonomousLoopService.stop(req.params.id);
+      if (!run) return res.status(404).json({ error: 'Autonomous run not found.' });
+      res.json(run);
     } catch (err) {
       next(err);
     }
