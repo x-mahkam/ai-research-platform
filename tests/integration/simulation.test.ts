@@ -81,4 +81,27 @@ describe('simulation run (integration)', () => {
       .send({ experimentId: '../../tmp/pwn' });
     expect(res.status).toBe(400);
   });
+
+  it('persists parameterOverrides on the created job so the solver receives them', async () => {
+    const expRes = await request(app)
+      .post('/api/experiments')
+      .send({ projectId: 'proj-001', title: 'ci-param-overrides' });
+    const experimentId = expRes.body.id as string;
+
+    const runRes = await request(app)
+      .post('/api/simulations/run')
+      .send({ experimentId, parameterOverrides: { V_bias: '0.7[V]', T_amb: 300 } });
+    expect(runRes.status).toBe(201);
+    expect(runRes.body.parameters?.parameterOverrides).toEqual({ V_bias: '0.7[V]', T_amb: 300 });
+  });
+
+  it('rejects a parameterOverrides value containing a comma', async () => {
+    const expRes = await request(app)
+      .post('/api/experiments')
+      .send({ projectId: 'proj-001', title: 'ci-bad-override' });
+    const res = await request(app)
+      .post('/api/simulations/run')
+      .send({ experimentId: expRes.body.id, parameterOverrides: { V: '0.1,0.2' } });
+    expect(res.status).toBe(400);
+  });
 });
