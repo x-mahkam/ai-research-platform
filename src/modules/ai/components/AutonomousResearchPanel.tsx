@@ -34,12 +34,37 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
 
 export const AutonomousResearchPanel: React.FC<Props> = ({ experiment }) => {
   const { t } = useI18n();
-  const [parameter, setParameter] = useState('V_app');
-  const [unit, setUnit] = useState('[V]');
+
+  // Seed the form from THIS experiment's real parameters (recovered from its
+  // .mph), so the panel reflects the actual model rather than the same fixed
+  // V_app/0→0.7 for every project. Empty when the model exposed no parameters.
+  const modelParams = experiment.parameters || [];
+  const firstParam = modelParams[0];
+  const firstValue = firstParam ? Number(firstParam.value) : NaN;
+  const hasNumericFirst = Number.isFinite(firstValue);
+
+  const [parameter, setParameter] = useState(firstParam?.name || '');
+  const [unit, setUnit] = useState(firstParam?.unit ? `[${firstParam.unit}]` : '');
   const [start, setStart] = useState('0');
-  const [stop, setStop] = useState('0.7');
-  const [step, setStep] = useState('0.05');
+  const [stop, setStop] = useState(hasNumericFirst ? String(firstValue) : '');
+  const [step, setStep] = useState(
+    hasNumericFirst && firstValue > 0 ? String(Number((firstValue / 10).toFixed(6))) : ''
+  );
   const [objectiveMetric, setObjectiveMetric] = useState('');
+
+  // When the user picks another model parameter, pull in its unit/value.
+  const handleParameterChange = (name: string) => {
+    setParameter(name);
+    const match = modelParams.find((p) => p.name === name);
+    if (match) {
+      setUnit(match.unit ? `[${match.unit}]` : '');
+      const v = Number(match.value);
+      if (Number.isFinite(v)) {
+        setStop(String(v));
+        if (v > 0) setStep(String(Number((v / 10).toFixed(6))));
+      }
+    }
+  };
   const [run, setRun] = useState<AutonomousRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -119,10 +144,19 @@ export const AutonomousResearchPanel: React.FC<Props> = ({ experiment }) => {
           <span>{t('auto.parameter')}</span>
           <input
             value={parameter}
-            onChange={(e) => setParameter(e.target.value)}
+            list="model-parameter-list"
+            onChange={(e) => handleParameterChange(e.target.value)}
             disabled={isActive}
+            placeholder={firstParam ? '' : 'V_app'}
             className="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1.5 text-white font-mono text-xs disabled:opacity-60"
           />
+          {modelParams.length > 0 && (
+            <datalist id="model-parameter-list">
+              {modelParams.map((p) => (
+                <option key={p.key || p.name} value={p.name} />
+              ))}
+            </datalist>
+          )}
         </label>
         <label className="text-xs text-slate-300 space-y-1">
           <span>{t('auto.unit')}</span>

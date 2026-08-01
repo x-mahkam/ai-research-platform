@@ -3,6 +3,8 @@ import { ISimulationJobRequest } from '../types.js';
 import { simulationRepository } from '../../repositories/simulationRepository.js';
 import { experimentRepository } from '../../repositories/experimentRepository.js';
 import { pluginRepository } from '../../repositories/pluginRepository.js';
+import { pluginRegistry } from '../../plugins/index.js';
+import { resolvePluginId } from '../pluginResolver.js';
 import { ValidationError, NotFoundError } from '../../shared/errors.js';
 import { config } from '../../configuration/index.js';
 import { generateId, getCurrentTimestamp, formatLogTimestamp } from '../../shared/utils.js';
@@ -21,14 +23,23 @@ export class SimulationJobManager {
       throw new NotFoundError(`Experiment with ID ${request.experimentId} not found.`);
     }
 
-    const plugin = pluginRepository.findById(experiment.pluginId);
-    const pluginName = plugin?.name || 'TCAD Simulator Engine';
+    // The UI stores a placeholder pluginId ("plugin-auto"), so resolve the real
+    // solver the same way the engine does — from the experiment's simulator —
+    // and display THAT. Otherwise the queue mislabels every run as the generic
+    // "TCAD Simulator Engine" even when COMSOL is what actually runs.
+    const resolvedPluginId = resolvePluginId(experiment.pluginId, experiment.simulator) || experiment.pluginId;
+    let pluginName: string;
+    if (pluginRegistry.has(resolvedPluginId)) {
+      pluginName = pluginRegistry.get(resolvedPluginId).metadata.name;
+    } else {
+      pluginName = pluginRepository.findById(resolvedPluginId)?.name || experiment.simulator || 'Simulation Engine';
+    }
 
     const newJob: SimulationJob = {
       id: generateId('sim-job'),
       experimentId: experiment.id,
       experimentTitle: experiment.title,
-      pluginId: experiment.pluginId,
+      pluginId: resolvedPluginId,
       pluginName,
       status: 'Queued',
       progress: 0,
