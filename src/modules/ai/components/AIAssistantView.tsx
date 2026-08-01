@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Experiment, ChatMessage } from '../../../types';
+import { apiClient } from '../../../services/apiClient';
 import {
   Sparkles,
   Send,
@@ -11,6 +12,8 @@ import {
   Brain,
   Lightbulb,
   Trash2,
+  PlayCircle,
+  Loader2,
 } from 'lucide-react';
 import { useI18n } from '../../../i18n';
 import { AutonomousResearchPanel } from './AutonomousResearchPanel';
@@ -63,6 +66,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
     }
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [runState, setRunState] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   useEffect(() => {
     try {
@@ -160,6 +167,46 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
     }
   };
 
+  // Run the current model, wait for it to finish, then have the AI analyze the
+  // real results — so the user gets a computed answer in one click instead of
+  // being told to dispatch the run elsewhere.
+  const handleRunAndAnalyze = async () => {
+    if (isRunning || isGenerating) return;
+    setIsRunning(true);
+    setRunState(t('chat.run.starting'));
+    try {
+      const job = await apiClient.runSimulation(experiment.id);
+      const start = Date.now();
+      let final: { status: string; error?: string } | undefined;
+      // Poll to a terminal state (bounded by the solver's own 1h cap).
+      while (Date.now() - start < 3_600_000) {
+        await new Promise((r) => setTimeout(r, 3000));
+        if (!mountedRef.current) return;
+        const jobs = await apiClient.getSimulations();
+        const j = jobs.find((x) => x.id === job.id);
+        if (j) {
+          setRunState(t('chat.run.running', { p: String(j.progress ?? 0) }));
+          if (j.status === 'Completed' || j.status === 'Failed') {
+            final = j;
+            break;
+          }
+        }
+      }
+      if (!mountedRef.current) return;
+      if (final?.status === 'Completed') {
+        setRunState(t('chat.run.analyzing'));
+        await handleSendMessage(t('chat.run.analyzePrompt'));
+        if (mountedRef.current) setRunState(null);
+      } else {
+        setRunState(t('chat.run.failed', { e: final?.error || '' }));
+      }
+    } catch (e) {
+      if (mountedRef.current) setRunState((e as Error).message);
+    } finally {
+      if (mountedRef.current) setIsRunning(false);
+    }
+  };
+
   return (
     <div id="ai-assistant-view-root" className="p-6 space-y-6 max-w-5xl mx-auto">
       {/* Top Header */}
@@ -187,6 +234,19 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* One-click: run the model and analyze the real results */}
+      <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <button
+          onClick={handleRunAndAnalyze}
+          disabled={isRunning || isGenerating}
+          className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer shrink-0"
+        >
+          {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+          {t('chat.run.btn')}
+        </button>
+        <p className="text-xs text-slate-400">{runState || t('chat.run.hint')}</p>
       </div>
 
       {/* Autonomous research sweep */}
