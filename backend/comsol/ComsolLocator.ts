@@ -32,6 +32,30 @@ export class ComsolLocator {
   }
 
   /**
+   * Resolve a companion executable that lives in the same bin directory as
+   * comsolbatch — e.g. "comsolcompile" (compiles COMSOL Java model files) or
+   * "comsol". Returns null when comsolbatch isn't located or the sibling is
+   * absent. Used by the LiveLink/Java model-build pipeline.
+   */
+  public static resolveCompanion(name: string): string | null {
+    const batch = this.findExecutable();
+    if (!batch) return null;
+    const dir = path.dirname(batch);
+    const candidates =
+      process.platform === 'win32'
+        ? [path.join(dir, `${name}.exe`), path.join(dir, name)]
+        : [path.join(dir, name), path.join(dir, `${name}.exe`)];
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+      } catch {
+        // ignore
+      }
+    }
+    return null;
+  }
+
+  /**
    * Resolve a user-supplied path (a comsolbatch file OR a folder that contains
    * it) to the actual executable FILE, or null. Used for both the manual path
    * and the env vars so a folder is never returned in place of the binary.
