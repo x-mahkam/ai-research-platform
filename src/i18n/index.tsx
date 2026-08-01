@@ -154,6 +154,7 @@ const en: Dict = {
   'chat.subtitle':
     "Powered by Claude AI. Context-aware analysis of your simulation's physics, parameters, and results — for COMSOL, TCAD, and any other solver.",
   'chat.context': 'Context',
+  'chat.clear': 'Clear conversation',
   'chat.welcome':
     'Hi! I\'m your AI Scientist Assistant, monitoring experiment "{title}". Ask me about the physics, parameters, or results of this model.',
   'chat.physicsFallback': 'simulation',
@@ -343,6 +344,7 @@ const uz: Dict = {
   'chat.subtitle':
     'Claude AI asosida. Simulyatsiyangizning fizikasi, parametrlari va natijalarini kontekstga qarab tahlil qiladi — COMSOL, TCAD va boshqa yechuvchilar uchun.',
   'chat.context': 'Kontekst',
+  'chat.clear': 'Yozishmani tozalash',
   'chat.welcome':
     'Salom! Men AI Olim yordamchingizman, "{title}" eksperimentini kuzatyapman. Bu model fizikasi, parametrlari yoki natijalari haqida so‘rang.',
   'chat.physicsFallback': 'simulyatsiya',
