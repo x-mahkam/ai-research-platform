@@ -137,6 +137,18 @@ export class ComsolPlugin extends BasePlugin {
 
     const outputModelPath = (params.outputModelPath as string) || path.join(workspacePath, 'output', 'result.mph');
 
+    // Run-time COMSOL Global Parameter overrides, if the caller (e.g. an
+    // autonomous sweep) supplied specific operating-point values.
+    const overridesRaw = (context.parameterOverrides || params.parameterOverrides) as
+      | Record<string, unknown>
+      | undefined;
+    const parameterOverrides: Record<string, string | number> = {};
+    if (overridesRaw && typeof overridesRaw === 'object') {
+      for (const [k, v] of Object.entries(overridesRaw)) {
+        if (typeof v === 'string' || typeof v === 'number') parameterOverrides[k] = v;
+      }
+    }
+
     const job = new ComsolJob({
       jobId: (context.jobId as string) || `comsol-job-${Date.now()}`,
       experimentId,
@@ -145,6 +157,7 @@ export class ComsolPlugin extends BasePlugin {
       outputModelPath,
       workspacePath,
       parameters: params,
+      parameterOverrides,
       options: {
         timeoutMs: (context.timeoutMs as number) || 3600000,
         env: (context.env as Record<string, string>) || {},

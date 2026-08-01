@@ -9,6 +9,13 @@ export interface IComsolJobParams {
   outputModelPath?: string;
   workspacePath: string;
   parameters?: Record<string, unknown>;
+  /**
+   * COMSOL Global Parameter values to override at run time (name → value).
+   * Passed to comsolbatch as -pname/-plist so a single model file can be
+   * re-run at different operating points — the basis of an autonomous sweep.
+   * Values may carry units, e.g. { V_bias: '0.7[V]', T_amb: 300 }.
+   */
+  parameterOverrides?: Record<string, string | number>;
   options?: ComsolJobOptions;
 }
 
@@ -20,6 +27,7 @@ export class ComsolJob {
   public readonly outputModelPath: string;
   public readonly workspacePath: string;
   public readonly parameters: Record<string, unknown>;
+  public readonly parameterOverrides: Record<string, string | number>;
   public readonly options: ComsolJobOptions;
   public readonly createdAt: string;
 
@@ -30,6 +38,7 @@ export class ComsolJob {
     this.inputModelPath = params.inputModelPath;
     this.workspacePath = params.workspacePath;
     this.parameters = params.parameters || {};
+    this.parameterOverrides = params.parameterOverrides || {};
     this.options = params.options || {};
     this.createdAt = new Date().toISOString();
 
@@ -45,6 +54,14 @@ export class ComsolJob {
       '-outputfile',
       this.outputModelPath,
     ];
+
+    // Override COMSOL Global Parameters at run time. comsolbatch takes the
+    // names and values as two parallel comma-separated lists.
+    const names = Object.keys(this.parameterOverrides);
+    if (names.length > 0) {
+      const values = names.map((n) => String(this.parameterOverrides[n]));
+      args.push('-pname', names.join(','), '-plist', values.join(','));
+    }
 
     if (this.options.batchArgs && this.options.batchArgs.length > 0) {
       args.push(...this.options.batchArgs);
