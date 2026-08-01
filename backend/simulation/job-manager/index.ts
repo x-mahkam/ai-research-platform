@@ -40,6 +40,9 @@ export class SimulationJobManager {
         `[${formatLogTimestamp()}] Job created for experiment "${experiment.title}"`,
         `[${formatLogTimestamp()}] Initializing generic simulation pipeline context...`,
       ],
+      // Carry the run's inputs (model path, parameter overrides) so the engine
+      // can hand them to the solver — without this the plugin sees no parameters.
+      parameters: request.parameters || {},
     };
 
     simulationRepository.create(newJob);

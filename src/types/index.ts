@@ -180,6 +180,8 @@ export interface SimulationJob {
   hostMachine: string;
   logs: string[];
   error?: string;
+  /** Run-time inputs for this job (e.g. inputModelPath, parameterOverrides). */
+  parameters?: Record<string, unknown>;
 }
 
 export interface PluginCapabilities {

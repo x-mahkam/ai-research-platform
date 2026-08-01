@@ -16,8 +16,8 @@ export class SimulationController {
 
   public runSimulation = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { experimentId } = validateRunSimulationDTO(req.body);
-      const newJob = await this.service.runSimulation(experimentId);
+      const { experimentId, parameterOverrides } = validateRunSimulationDTO(req.body);
+      const newJob = await this.service.runSimulation(experimentId, parameterOverrides);
       res.status(201).json(newJob);
     } catch (err) {
       next(err);
