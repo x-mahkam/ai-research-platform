@@ -5,6 +5,7 @@ import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
 import { ValidationError } from '../../shared/errors.js';
 import { updateProviderKeys, getComsolStatus, updateComsolPath } from '../../settings/apiKeys.js';
 import { autonomousLoopService } from '../../ai/autoloop/index.js';
+import { modelRebuildService } from '../../ai/modelBuilder/index.js';
 import { validateParameterOverrides, assertSafeId } from '../dto/simulationDTO.js';
 
 export class AIController {
@@ -171,6 +172,34 @@ export class AIController {
     try {
       const run = autonomousLoopService.stop(req.params.id);
       if (!run) return res.status(404).json({ error: 'Autonomous run not found.' });
+      res.json(run);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public startRebuildModel = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body || {};
+      const experimentId = assertSafeId(body.experimentId, 'experimentId');
+      const instruction = typeof body.instruction === 'string' ? body.instruction.trim() : '';
+      if (!instruction) {
+        throw new ValidationError('An instruction describing the fix to apply is required.');
+      }
+      const providers = Array.isArray(body.providers)
+        ? body.providers.filter((p: unknown): p is string => typeof p === 'string')
+        : undefined;
+      const run = modelRebuildService.start({ experimentId, instruction, providers });
+      res.status(201).json(run);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getRebuildModel = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const run = modelRebuildService.getStatus(req.params.id);
+      if (!run) return res.status(404).json({ error: 'Rebuild run not found.' });
       res.json(run);
     } catch (err) {
       next(err);

@@ -1,4 +1,4 @@
-import { Project, Experiment, SimulationJob, SimulatorPlugin, OptimizationJob, GeneratedReport, ModelFile, AutonomousRun } from '../types';
+import { Project, Experiment, SimulationJob, SimulatorPlugin, OptimizationJob, GeneratedReport, ModelFile, AutonomousRun, RebuildRun } from '../types';
 
 export class ApiClient {
   public async getProjects(): Promise<Project[]> {
@@ -300,6 +300,29 @@ export class ApiClient {
   public async stopAutoResearch(runId: string): Promise<AutonomousRun> {
     const res = await fetch(`/api/ai/auto-research/${runId}/stop`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to stop autonomous run');
+    return res.json();
+  }
+
+  public async startRebuildModel(input: {
+    experimentId: string;
+    instruction: string;
+    providers?: string[];
+  }): Promise<RebuildRun> {
+    const res = await fetch('/api/ai/rebuild-model', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to start model rebuild');
+    }
+    return res.json();
+  }
+
+  public async getRebuildModel(runId: string): Promise<RebuildRun> {
+    const res = await fetch(`/api/ai/rebuild-model/${runId}`);
+    if (!res.ok) throw new Error('Failed to load rebuild run');
     return res.json();
   }
 

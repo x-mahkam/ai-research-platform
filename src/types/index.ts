@@ -209,6 +209,21 @@ export interface AutonomousRun {
   updatedAt: string;
 }
 
+export interface RebuildRun {
+  id: string;
+  experimentId: string;
+  status: 'generating' | 'building' | 'completed' | 'failed';
+  instruction: string;
+  provider?: string;
+  javaSource?: string;
+  outputModelPath?: string;
+  compileLog?: string;
+  runLog?: string;
+  error?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PluginCapabilities {
   supports2DMesh: boolean;
   supports3D: boolean;
