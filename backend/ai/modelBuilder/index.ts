@@ -23,7 +23,34 @@ export function extractJavaSource(raw: string): string {
   // Drop anything before the first import/class if the model added a preamble.
   const start = code.search(/(^|\n)\s*(import\s|public\s+class\s|class\s+Model\b)/);
   if (start > 0) code = code.slice(start);
-  return code.trim();
+  return sanitizeJavaSource(code.trim());
+}
+
+/**
+ * comsolcompile is a plain Java compiler and chokes on non-ASCII bytes (they
+ * showed up as replacement characters and broke a string literal). Normalize
+ * the few common typographic offenders to ASCII and drop any remaining
+ * non-ASCII — valid COMSOL model code is pure ASCII, so this only removes
+ * accidental smart quotes / foreign-language comment text.
+ */
+export function sanitizeJavaSource(code: string): string {
+  return code
+    .replace(/[‘’‛′]/g, "'") // curly single quotes / prime
+    .replace(/[“”‟″]/g, '"') // curly double quotes
+    .replace(/[–—−]/g, '-') // en/em dash, minus
+    .replace(/…/g, '...') // ellipsis
+    .replace(/ /g, ' ') // non-breaking space
+    // eslint-disable-next-line no-control-regex
+    .replace(/[^\x00-\x7F]/g, ''); // drop anything else non-ASCII
+}
+
+/** Heuristic: does the source look complete (balanced braces, ends with })? */
+export function looksTruncated(code: string): boolean {
+  if (!code) return true;
+  const opens = (code.match(/\{/g) || []).length;
+  const closes = (code.match(/\}/g) || []).length;
+  if (opens !== closes) return true;
+  return !/}\s*$/.test(code);
 }
 
 /** Build the user-facing generation prompt embedding paths, diagnostics, instruction. */
@@ -85,7 +112,9 @@ function defaultGenerate(system: string, prompt: string, providers?: string[]) {
     return Promise.reject(new Error('No AI provider is configured to generate the model script.'));
   }
   const provider = selected[0];
-  return provider.generate({ system, prompt, maxTokens: 8000 }).then((text) => ({ text, provider: provider.id }));
+  // Model-build scripts are long; a small cap truncates them mid-string and
+  // the compile fails on an unterminated literal. Give plenty of room.
+  return provider.generate({ system, prompt, maxTokens: 16000 }).then((text) => ({ text, provider: provider.id }));
 }
 
 async function defaultRunScript(
@@ -177,6 +206,12 @@ export class ModelRebuildService {
       if (!run.javaSource || !/class\s+Model\b/.test(run.javaSource)) {
         run.status = 'failed';
         run.error = 'The AI did not return a valid COMSOL Java model (class Model).';
+        this.touch(run);
+        return;
+      }
+      if (looksTruncated(run.javaSource)) {
+        run.status = 'failed';
+        run.error = 'The generated model script looks truncated (unbalanced braces). Try again — the model may need a shorter, more focused instruction.';
         this.touch(run);
         return;
       }

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import {
   extractJavaSource,
+  sanitizeJavaSource,
+  looksTruncated,
   buildGenerationPrompt,
   ModelRebuildService,
   RebuildDeps,
@@ -31,6 +33,25 @@ describe('extractJavaSource', () => {
 
   it('returns trimmed input when already clean', () => {
     expect(extractJavaSource('  public class Model {}  ')).toBe('public class Model {}');
+  });
+
+  it('strips non-ASCII that breaks comsolcompile', () => {
+    // Uzbek comment + smart quotes + ellipsis -> ASCII/removed.
+    const dirty = 'public class Model { /* Zatvor uzunligi */ String s = “x”; }';
+    const clean = sanitizeJavaSource(dirty);
+    // eslint-disable-next-line no-control-regex
+    expect(/[^\x00-\x7F]/.test(clean)).toBe(false);
+    expect(clean).toContain('"x"');
+  });
+});
+
+describe('looksTruncated', () => {
+  it('flags unbalanced braces / mid-string cutoff', () => {
+    expect(looksTruncated('public class Model { void m() {')).toBe(true);
+    expect(looksTruncated('System.out.println("Table exported')).toBe(true);
+  });
+  it('accepts a balanced, closed file', () => {
+    expect(looksTruncated('public class Model { }')).toBe(false);
   });
 });
 
