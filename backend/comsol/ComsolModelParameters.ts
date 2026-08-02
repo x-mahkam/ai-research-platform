@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { readMph } from './MphArchive.js';
 
 /**
  * A COMSOL Global Parameter recovered from a model file, in the shape the
@@ -8,9 +9,9 @@ export interface ExtractedModelParam {
   key: string;
   name: string;
   value: number | string;
-  /** Always set — the extractor only matches values that carry a unit. */
   unit: string;
   group: string;
+  description?: string;
 }
 
 const MAX_READ_BYTES = 64 * 1024 * 1024; // cap memory on very large .mph files
@@ -76,6 +77,22 @@ export function extractParametersFromMph(filePath: string): ExtractedModelParam[
     if (!filePath || !fs.existsSync(filePath)) return [];
     const stat = fs.statSync(filePath);
     if (!stat.isFile() || stat.size === 0) return [];
+
+    // Preferred path: COMSOL 6.x .mph is a ZIP whose model XML lists the real
+    // Global Parameters (<expressions name= expr= descr=>). Parse those.
+    const archive = readMph(filePath);
+    if (archive && archive.params.length) {
+      return archive.params.map((p) => ({
+        key: p.key,
+        name: p.name,
+        value: p.value,
+        unit: p.unit || '',
+        group: p.group,
+        description: p.description,
+      }));
+    }
+
+    // Fallback for older/binary .mph: conservative raw byte-scan.
     const size = Math.min(stat.size, MAX_READ_BYTES);
     const fd = fs.openSync(filePath, 'r');
     try {
