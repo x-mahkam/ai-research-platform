@@ -3,6 +3,7 @@ import path from 'path';
 import { aiProviderRegistry } from '../providers/index.js';
 import { SYSTEM_PROMPT_MODEL_BUILDER } from '../prompts/index.js';
 import { comsolScriptRunner, ScriptRunResult } from '../../comsol/ComsolScriptRunner.js';
+import { readMph, summarizeTree } from '../../comsol/MphArchive.js';
 import { experimentRepository } from '../../repositories/experimentRepository.js';
 import { modelRepository } from '../../repositories/modelRepository.js';
 import { LoggerService } from '../../logging/logger.js';
@@ -32,12 +33,16 @@ export function buildGenerationPrompt(input: {
   instruction: string;
   diagnostics?: string;
   simulator?: string;
+  modelTree?: string;
 }): string {
   const toForward = (p: string) => p.replace(/\\/g, '/');
   return [
     `INPUT model path (load this): ${toForward(input.inputModelPath)}`,
     `OUTPUT model path (save to this): ${toForward(input.outputModelPath)}`,
     input.simulator ? `Simulator: ${input.simulator}` : '',
+    input.modelTree
+      ? `\nExisting model tree (use these EXACT tags when referencing existing nodes; create new tags for new nodes):\n${input.modelTree}`
+      : '',
     input.diagnostics ? `\nWhat is wrong / solver diagnostics:\n${input.diagnostics}` : '',
     `\nRequested fix / instruction:\n${input.instruction}`,
     `\nGenerate the complete COMSOL Java model file (class Model) that loads the INPUT, applies this fix, solves, and saves to OUTPUT.`,
@@ -150,12 +155,17 @@ export class ModelRebuildService {
       const outputModelPath = path.join(workspacePath, 'output', 'rebuilt_model.mph');
 
       const diagnostics = extractDiagnostics(exp);
+      // Give the AI the real model tree (physics/feature/study tags) so it
+      // targets existing nodes correctly instead of guessing.
+      const archive = readMph(absoluteInput);
+      const modelTree = archive?.tree ? summarizeTree(archive.tree) : undefined;
       const prompt = buildGenerationPrompt({
         inputModelPath: absoluteInput,
         outputModelPath,
         instruction: run.instruction,
         diagnostics,
         simulator: (exp as { simulator?: string })?.simulator,
+        modelTree,
       });
 
       const gen = await this.deps.generate(SYSTEM_PROMPT_MODEL_BUILDER, prompt, providers);
