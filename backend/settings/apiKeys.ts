@@ -56,6 +56,40 @@ export function updateProviderKeys(keys: Record<string, string>): void {
   aiProviderRegistry.reload();
 }
 
+/**
+ * Enable / configure the local Ollama provider at runtime. Persists
+ * OLLAMA_MODEL (and optional base URL) to the .env in effect and reloads the
+ * registry so the local model becomes selectable immediately. Passing an empty
+ * model disables it.
+ */
+export function updateOllamaSettings(input: { model?: string; baseURL?: string }): { enabled: boolean; model?: string; baseURL?: string } {
+  const model = typeof input.model === 'string' ? input.model.trim() : '';
+  const baseURL = typeof input.baseURL === 'string' ? input.baseURL.trim() : '';
+  const entries: Record<string, string> = {};
+  if (model) {
+    process.env.OLLAMA_MODEL = model;
+    entries.OLLAMA_MODEL = model;
+  }
+  if (baseURL) {
+    process.env.OLLAMA_BASE_URL = baseURL;
+    entries.OLLAMA_BASE_URL = baseURL;
+  }
+  if (Object.keys(entries).length) {
+    try {
+      upsertEnvFile(envInfo.path, entries);
+      logger.info(`Saved Ollama settings to ${envInfo.path}`);
+    } catch (err: any) {
+      logger.error(`Could not persist Ollama settings to ${envInfo.path}: ${err.message}`);
+    }
+    aiProviderRegistry.reload();
+  }
+  return {
+    enabled: Boolean(process.env.OLLAMA_MODEL),
+    model: process.env.OLLAMA_MODEL,
+    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+  };
+}
+
 /** Whether a COMSOL executable is currently resolvable, and its path. */
 export function getComsolStatus(): { configured: boolean; path?: string } {
   try {

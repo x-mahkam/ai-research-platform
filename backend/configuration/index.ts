@@ -14,6 +14,7 @@ export interface AppConfig {
       openai: { apiKey?: string; model: string };
       grok: { apiKey?: string; model: string };
       claude: { apiKey?: string; model: string };
+      ollama: { model: string; baseURL: string; enabled: boolean };
     };
   };
   simulation: {
@@ -47,6 +48,14 @@ export function readAiProvidersFromEnv(): AppConfig['ai']['providers'] {
     claude: {
       apiKey: process.env.ANTHROPIC_API_KEY,
       model: process.env.ANTHROPIC_MODEL || 'claude-opus-5',
+    },
+    // Local LLM via Ollama (OpenAI-compatible endpoint). No API key — it is
+    // "configured" once the user names a model to run (OLLAMA_MODEL), so a
+    // machine without Ollama simply leaves it absent.
+    ollama: {
+      model: process.env.OLLAMA_MODEL || 'llama3.1',
+      baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+      enabled: Boolean(process.env.OLLAMA_MODEL || process.env.OLLAMA_ENABLED),
     },
   };
 }

@@ -17,6 +17,7 @@ router.post('/ai/auto-research/:id/stop', aiController.stopAutoResearch);
 router.post('/ai/rebuild-model', aiController.startRebuildModel);
 router.get('/ai/rebuild-model/:id', aiController.getRebuildModel);
 router.post('/ai/keys', aiController.saveKeys);
+router.post('/ai/ollama', aiController.saveOllama);
 router.get('/settings/comsol', aiController.comsolStatus);
 router.post('/settings/comsol', aiController.saveComsol);
 

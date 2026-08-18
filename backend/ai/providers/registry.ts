@@ -3,6 +3,7 @@ import { LoggerService } from '../../logging/logger.js';
 import { AIProvider, AIProviderMeta } from './types.js';
 import { OpenAICompatibleProvider } from './OpenAICompatibleProvider.js';
 import { AnthropicProvider } from './AnthropicProvider.js';
+import { OllamaProvider } from './OllamaProvider.js';
 
 const logger = new LoggerService('AIProviderRegistry');
 
@@ -35,6 +36,7 @@ export class AIProviderRegistry {
       new OpenAICompatibleProvider('openai', 'ChatGPT (OpenAI)', p.openai.model, p.openai.apiKey, undefined),
       new OpenAICompatibleProvider('grok', 'Grok (xAI)', p.grok.model, p.grok.apiKey, GROK_BASE_URL),
       new AnthropicProvider(p.claude.model, p.claude.apiKey),
+      new OllamaProvider(p.ollama.model, p.ollama.baseURL, p.ollama.enabled),
     ];
   }
 

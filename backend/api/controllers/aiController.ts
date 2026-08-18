@@ -3,7 +3,7 @@ import { aiService, AIService } from '../../services/aiService.js';
 import { validateAIChatDTO, validateAIReportDTO } from '../dto/aiDTO.js';
 import { SYSTEM_CONSTANTS } from '../../configuration/index.js';
 import { ValidationError } from '../../shared/errors.js';
-import { updateProviderKeys, getComsolStatus, updateComsolPath } from '../../settings/apiKeys.js';
+import { updateProviderKeys, getComsolStatus, updateComsolPath, updateOllamaSettings } from '../../settings/apiKeys.js';
 import { autonomousLoopService } from '../../ai/autoloop/index.js';
 import { modelRebuildService } from '../../ai/modelBuilder/index.js';
 import { validateParameterOverrides, assertSafeId } from '../dto/simulationDTO.js';
@@ -209,6 +209,25 @@ export class AIController {
   public comsolStatus = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       res.json(getComsolStatus());
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public saveOllama = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const remote = req.socket.remoteAddress || '';
+      const isLocal =
+        remote === '127.0.0.1' ||
+        remote === '::1' ||
+        remote === '::ffff:127.0.0.1' ||
+        req.hostname === 'localhost';
+      if (!isLocal) {
+        return res.status(403).json({ error: 'Ollama settings can only be changed from the local machine.' });
+      }
+      const model = typeof req.body?.model === 'string' ? req.body.model : '';
+      const baseURL = typeof req.body?.baseURL === 'string' ? req.body.baseURL : '';
+      res.json(updateOllamaSettings({ model, baseURL }));
     } catch (err) {
       next(err);
     }

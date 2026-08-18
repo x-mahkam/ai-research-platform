@@ -206,6 +206,13 @@ const en: Dict = {
   'settings.open': 'Settings',
   'settings.title': 'Settings',
   'keys.section': 'AI API keys',
+  'ollama.section': 'Local LLM (Ollama)',
+  'ollama.desc':
+    'Run a free, offline model via Ollama for cheap tasks and as a fallback when cloud providers fail. Install Ollama, run "ollama pull llama3.1", then enter the model name here.',
+  'ollama.placeholder': 'llama3.1',
+  'ollama.save': 'Enable',
+  'ollama.saved': 'Local model enabled: {model}',
+  'ollama.disabled': 'Local model disabled.',
   'comsol.section': 'COMSOL (local solver)',
   'comsol.desc':
     'Point the platform at your comsolbatch.exe (or the folder that contains it) so it can run .mph models. COMSOL does NOT need to be open — the platform launches it in the background.',
@@ -435,6 +442,13 @@ const uz: Dict = {
   'settings.open': 'Sozlamalar',
   'settings.title': 'Sozlamalar',
   'keys.section': 'AI API kalitlari',
+  'ollama.section': 'Lokal LLM (Ollama)',
+  'ollama.desc':
+    'Ollama orqali bepul, oflayn model — arzon vazifalar uchun va bulutli providerlar ishlamay qolganda zaxira sifatida. Ollama o‘rnating, "ollama pull llama3.1" qiling, keyin model nomini shu yerga kiriting.',
+  'ollama.placeholder': 'llama3.1',
+  'ollama.save': 'Yoqish',
+  'ollama.saved': 'Lokal model yoqildi: {model}',
+  'ollama.disabled': 'Lokal model o‘chirildi.',
   'comsol.section': 'COMSOL (lokal yechuvchi)',
   'comsol.desc':
     'Platforma .mph modellarni ishga tushira olishi uchun comsolbatch.exe (yoki uni o‘z ichiga olgan papka) yo‘lini ko‘rsating. COMSOL ochiq bo‘lishi SHART EMAS — platforma uni fonda o‘zi ishga tushiradi.',

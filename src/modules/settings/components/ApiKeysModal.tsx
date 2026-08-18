@@ -33,6 +33,27 @@ export const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose, onS
   const [savingComsol, setSavingComsol] = useState(false);
   const [comsolMessage, setComsolMessage] = useState<string | null>(null);
 
+  // Local LLM (Ollama)
+  const [ollamaModel, setOllamaModel] = useState('');
+  const [savingOllama, setSavingOllama] = useState(false);
+  const [ollamaMessage, setOllamaMessage] = useState<string | null>(null);
+
+  const handleSaveOllama = async () => {
+    if (!ollamaModel.trim()) return;
+    setSavingOllama(true);
+    setOllamaMessage(null);
+    try {
+      const res = await apiClient.saveOllamaSettings({ model: ollamaModel.trim() });
+      setOllamaMessage(res.enabled ? t('ollama.saved', { model: res.model || '' }) : t('ollama.disabled'));
+      apiClient.getAIProviders().then((d) => setProviders(d.providers)).catch(() => {});
+      onSaved?.();
+    } catch (err) {
+      setOllamaMessage(err instanceof Error ? err.message : 'Failed to save Ollama settings');
+    } finally {
+      setSavingOllama(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     setValues({});
@@ -140,6 +161,35 @@ export const ApiKeysModal: React.FC<ApiKeysModalProps> = ({ isOpen, onClose, onS
             </button>
           </div>
           {comsolMessage && <p className="text-[11px] text-cyan-300">{comsolMessage}</p>}
+        </div>
+
+        <div className="border-t border-slate-800" />
+
+        {/* Local LLM (Ollama) */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-bold text-slate-200">{t('ollama.section')}</span>
+          </div>
+          <p className="text-[11px] text-slate-400 leading-relaxed">{t('ollama.desc')}</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={ollamaModel}
+              onChange={(e) => setOllamaModel(e.target.value)}
+              placeholder={t('ollama.placeholder')}
+              className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-[11px] text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              onClick={handleSaveOllama}
+              disabled={savingOllama || !ollamaModel.trim()}
+              className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-[11px] font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+            >
+              {savingOllama ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />}
+              {t('ollama.save')}
+            </button>
+          </div>
+          {ollamaMessage && <p className="text-[11px] text-emerald-300">{ollamaMessage}</p>}
         </div>
 
         <div className="border-t border-slate-800" />
