@@ -171,6 +171,23 @@ export class ApiClient {
     return res.json();
   }
 
+  public async saveOllamaSettings(input: { model: string; baseURL?: string }): Promise<{
+    enabled: boolean;
+    model?: string;
+    baseURL?: string;
+  }> {
+    const res = await fetch('/api/ai/ollama', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to save Ollama settings');
+    }
+    return res.json();
+  }
+
   public async planExperimentSetup(input: {
     objective: string;
     simulator?: string;

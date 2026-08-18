@@ -20,9 +20,9 @@ beforeAll(async () => {
 });
 
 describe('AIProviderRegistry', () => {
-  it('exposes all five providers regardless of configuration', () => {
+  it('exposes all providers regardless of configuration', () => {
     const ids = registry.listAll().map((p) => p.id).sort();
-    expect(ids).toEqual(['claude', 'deepseek', 'gemini', 'grok', 'openai']);
+    expect(ids).toEqual(['claude', 'deepseek', 'gemini', 'grok', 'ollama', 'openai']);
   });
 
   it('marks only providers with a key as configured', () => {
