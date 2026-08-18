@@ -6,6 +6,7 @@ import { aiMemoryStore } from '../memory/index.js';
 import { aiContextAggregator } from '../context/index.js';
 import { aiProviderRegistry } from '../providers/index.js';
 import { AIProvider } from '../providers/types.js';
+import { aiRouter, taskFromPrompt } from '../router/index.js';
 import { GeneratedReport, ExperimentSetupProposal, ProposedParameter } from '../../shared/types.js';
 
 export * from './AIResearchEngine.js';
@@ -102,7 +103,14 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
         'No AI provider is configured on the server.'
       );
     } else if (selected.length === 1) {
-      textResponse = await this.runSingleProvider(selected[0], contents, prompt, context, suggestedParameters);
+      textResponse = await this.runSingleProvider(
+        selected[0],
+        contents,
+        prompt,
+        context,
+        suggestedParameters,
+        payload.providers
+      );
     } else {
       textResponse = await this.runEnsemble(selected, contents, prompt, context, suggestedParameters);
     }
@@ -235,23 +243,27 @@ Design the experiment setup as JSON per your instructions.`;
     contents: string,
     prompt: string,
     context: any,
-    suggestedParameters?: Record<string, unknown>
+    suggestedParameters?: Record<string, unknown>,
+    requested?: string[]
   ): Promise<string> {
+    // Route through the fallback chain: try the pinned provider first, then any
+    // other configured provider if it errors (rate limit / bad key / timeout),
+    // ordered by the task inferred from the prompt. Only when the whole chain
+    // fails do we fall back to the built-in physics response.
     try {
-      logger.info(`AI Engine calling provider "${provider.id}" (${provider.model})`);
-      const text = await provider.generate({
-        system: SYSTEM_PROMPT_CORE,
-        prompt: contents,
-        maxTokens: config.ai.maxTokens,
-      });
-      return text || 'Unable to generate analysis output from AI Engine.';
+      logger.info(`AI Engine routing (pinned "${provider.id}") with fallback`);
+      const result = await aiRouter.generateWithFallback(
+        { system: SYSTEM_PROMPT_CORE, prompt: contents, maxTokens: config.ai.maxTokens },
+        { requested: requested && requested.length ? requested : [provider.id], task: taskFromPrompt(prompt) }
+      );
+      return result.text || 'Unable to generate analysis output from AI Engine.';
     } catch (err: any) {
-      logger.error(`Error contacting AI provider "${provider.id}"`, { error: err.message });
+      logger.error('All AI providers failed for this request', { error: err.message });
       return this.generatePhysicsFallbackResponse(
         prompt,
         context,
         suggestedParameters,
-        `The ${provider.label} call failed: ${err.message}`
+        `Every configured AI provider failed: ${err.message}`
       );
     }
   }
