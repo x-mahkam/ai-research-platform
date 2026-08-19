@@ -53,6 +53,8 @@ export class NotificationService {
       timestamp: new Date().toISOString(),
     };
     this.notifications.unshift(notification);
+    // Bound the in-memory buffer so it doesn't grow without limit over uptime.
+    if (this.notifications.length > 200) this.notifications.length = 200;
     logger.info(`[Notification] ${title}: ${message}`);
     return notification;
   }

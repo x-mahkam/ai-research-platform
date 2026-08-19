@@ -18,7 +18,11 @@ export class SimulationRepository extends BaseRepository<JobEntity> implements I
   public appendLog(id: string, logMessage: string): SimulationJob | undefined {
     const job = this.findById(id);
     if (!job) return undefined;
+    // Keep only the most recent lines. Without this the whole (growing) log
+    // array is re-serialized into the record blob on every appended line.
+    const MAX_LOG_LINES = 500;
     const logs = [...(job.logs || []), logMessage];
+    if (logs.length > MAX_LOG_LINES) logs.splice(0, logs.length - MAX_LOG_LINES);
     return this.update(id, { logs }) as SimulationJob;
   }
 }

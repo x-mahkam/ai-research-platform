@@ -154,6 +154,11 @@ export class ModelRebuildService {
       updatedAt: now,
     };
     this.runs.set(run.id, run);
+    // Bound the store so it can't grow without limit over the process lifetime.
+    if (this.runs.size > 100) {
+      const oldest = this.runs.keys().next().value;
+      if (oldest) this.runs.delete(oldest);
+    }
     void this.execute(run.id, input.providers);
     return run;
   }
