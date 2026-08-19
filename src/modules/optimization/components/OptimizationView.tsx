@@ -28,7 +28,7 @@ export const OptimizationView: React.FC<OptimizationViewProps> = ({
   const activeJob = optimizationJobs.find((j) => j.id === selectedJobId) || optimizationJobs[0];
 
   // New Optimization modal / form state
-  const [algorithm, setAlgorithm] = useState<OptimizationAlgorithm>('Bayesian Optimization');
+  const [algorithm, setAlgorithm] = useState<OptimizationAlgorithm>('Grid Search');
   const [targetMetric, setTargetMetric] = useState('Max Ion/Ioff ratio (Target > 1e7)');
   const [maxIterations, setMaxIterations] = useState(20);
 
@@ -45,12 +45,12 @@ export const OptimizationView: React.FC<OptimizationViewProps> = ({
         <div>
           <div className="flex items-center space-x-2">
             <h1 className="text-xl font-bold text-white tracking-tight">Optimization Engine (ARP-006)</h1>
-            <span className="text-xs font-mono bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded">
-              Bayesian & Genetic Solvers
+            <span className="text-xs font-mono bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded">
+              Deterministic grid sweep
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Automated multi-parameter searching to maximize target figure-of-merit (FOM) metrics in semiconductor TCAD.
+            Sweeps each parameter linearly across its bounds and records the real objective from each run. (Not a Bayesian/genetic solver.)
           </p>
         </div>
 
@@ -119,7 +119,7 @@ export const OptimizationView: React.FC<OptimizationViewProps> = ({
             <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-cyan-950 p-5 rounded-xl border border-slate-800 shadow-md space-y-3">
               <div className="flex items-center justify-between text-xs font-mono">
                 <span className="text-cyan-400 font-bold flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-amber-400" /> OPTIMAL PARETO SOLUTION FOUND
+                  <Award className="w-4 h-4 text-amber-400" /> Best result so far
                 </span>
                 <span className="text-slate-400">Iteration {activeJob.currentIteration}</span>
               </div>
@@ -157,9 +157,8 @@ export const OptimizationView: React.FC<OptimizationViewProps> = ({
                     <tr className="border-b border-slate-800 text-slate-400 bg-slate-800/40">
                       <th className="p-2.5">Iter #</th>
                       <th className="p-2.5">Objective Value</th>
-                      <th className="p-2.5">Gate Length (nm)</th>
-                      <th className="p-2.5">Workfunction (eV)</th>
-                      <th className="p-2.5">Pareto Status</th>
+                      <th className="p-2.5">Parameters</th>
+                      <th className="p-2.5">Best so far</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -167,17 +166,20 @@ export const OptimizationView: React.FC<OptimizationViewProps> = ({
                       <tr key={item.iteration} className="hover:bg-slate-800/50">
                         <td className="p-2.5 font-bold text-cyan-400">#{item.iteration}</td>
                         <td className="p-2.5 font-bold text-emerald-300">
-                          {item.objectiveValue.toExponential(2)}
+                          {item.objectiveValue != null ? item.objectiveValue.toExponential(2) : '—'}
                         </td>
-                        <td className="p-2.5">{item.parameters.Gate_Length_nm || 12}</td>
-                        <td className="p-2.5">{item.parameters.WorkFunction_eV || 4.58}</td>
+                        <td className="p-2.5 text-slate-300">
+                          {Object.entries(item.parameters)
+                            .map(([k, v]) => `${k}=${v}`)
+                            .join(', ') || '—'}
+                        </td>
                         <td className="p-2.5">
                           {item.isParetoOptimal ? (
                             <span className="bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded text-[10px]">
-                              PARETO OPTIMAL
+                              Best so far
                             </span>
                           ) : (
-                            <span className="text-slate-500 text-[10px]">Sub-optimal</span>
+                            <span className="text-slate-500 text-[10px]">—</span>
                           )}
                         </td>
                       </tr>

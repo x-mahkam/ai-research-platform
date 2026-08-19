@@ -228,9 +228,12 @@ export interface IOptimizationPrediction {
   currentValue?: string | number;
   predictedGradientDirection: Record<string, 'INCREASE' | 'DECREASE' | 'MAINTAIN'>;
   suggestedNextStep: Record<string, number | string>;
-  expectedImprovementPercentage: number;
-  confidenceScore: number;
+  /** null — the platform does not compute a real improvement estimate/confidence. */
+  expectedImprovementPercentage: number | null;
+  confidenceScore: number | null;
   physicsRationale: string;
+  /** Honest flag: these directions are a rule-based heuristic, not a computed optimization. */
+  heuristic: boolean;
 }
 
 export class OptimizationPredictor {
@@ -266,9 +269,12 @@ export class OptimizationPredictor {
       targetMetric,
       predictedGradientDirection: gradient,
       suggestedNextStep: nextStep,
-      expectedImprovementPercentage: 14.8,
-      confidenceScore: 0.92,
-      physicsRationale: `Based on electrostatics sensitivity calculations. Decreasing workfunction lowers threshold voltage, increasing channel overdrive (Vgs - Vth)^2 and drive current.`,
+      // Not computed — the platform runs no real sensitivity analysis, so we do
+      // not fabricate an improvement percentage or a confidence score.
+      expectedImprovementPercentage: null,
+      confidenceScore: null,
+      heuristic: true,
+      physicsRationale: `Rule-based heuristic direction (not a computed optimization): for many semiconductor devices, lowering the gate workfunction lowers threshold voltage and raises drive current. Validate against real swept runs before trusting.`,
     };
   }
 }

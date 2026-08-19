@@ -281,7 +281,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <div className="flex items-center space-x-2">
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
-                <span>Run Bayesian Optimization</span>
+                <span>Run Parameter Sweep</span>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
             </button>

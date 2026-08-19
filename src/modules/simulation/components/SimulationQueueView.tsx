@@ -425,17 +425,21 @@ export const SimulationQueueView: React.FC<SimulationQueueViewProps> = ({
                 <div className="bg-slate-800/60 p-3 rounded-lg border border-slate-800 space-y-1">
                   <div className="flex items-center space-x-1.5 text-slate-400">
                     <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>CPU Allocation</span>
+                    <span>CPU Usage</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-100 font-mono">{selectedJob.cpuUsage}%</div>
+                  <div className="text-lg font-bold text-slate-100 font-mono">
+                    {selectedJob.cpuUsage ? `${selectedJob.cpuUsage}%` : 'not measured'}
+                  </div>
                 </div>
 
                 <div className="bg-slate-800/60 p-3 rounded-lg border border-slate-800 space-y-1">
                   <div className="flex items-center space-x-1.5 text-slate-400">
                     <HardDrive className="w-3.5 h-3.5 text-blue-400" />
-                    <span>RAM Quota</span>
+                    <span>RAM Usage</span>
                   </div>
-                  <div className="text-lg font-bold text-slate-100 font-mono">{selectedJob.memoryUsage} GB</div>
+                  <div className="text-lg font-bold text-slate-100 font-mono">
+                    {selectedJob.memoryUsage ? `${selectedJob.memoryUsage} GB` : 'not measured'}
+                  </div>
                 </div>
 
                 <div className="bg-slate-800/60 p-3 rounded-lg border border-slate-800 space-y-1">

@@ -1,6 +1,6 @@
+import os from 'os';
 import { IWorkerNode } from '../types.js';
 import { LoggerService } from '../../logging/logger.js';
-import { config } from '../../configuration/index.js';
 import { simulationRepository } from '../../repositories/simulationRepository.js';
 import { formatLogTimestamp } from '../../shared/utils.js';
 
@@ -16,28 +16,18 @@ export class WorkerManager {
   private seedDefaultWorkers(): void {
     const defaultWorker: IWorkerNode = {
       id: 'worker-node-01',
-      hostname: config.simulation.defaultHostMachine,
+      // The platform runs locally; the "worker" is this machine. No fabricated
+      // distributed nodes or usage percentages.
+      hostname: os.hostname() || 'local',
       status: 'IDLE',
       maxConcurrentJobs: 4,
       activeJobs: [],
-      cpuUsagePct: 12.5,
-      memoryUsageGb: 4.2,
-      lastHeartbeat: new Date().toISOString(),
-    };
-
-    const backupWorker: IWorkerNode = {
-      id: 'worker-node-02',
-      hostname: 'node-compute-03.arp.local',
-      status: 'IDLE',
-      maxConcurrentJobs: 8,
-      activeJobs: [],
-      cpuUsagePct: 5.0,
-      memoryUsageGb: 2.1,
+      cpuUsagePct: 0,
+      memoryUsageGb: 0,
       lastHeartbeat: new Date().toISOString(),
     };
 
     this.workers.set(defaultWorker.id, defaultWorker);
-    this.workers.set(backupWorker.id, backupWorker);
   }
 
   public assignWorker(jobId: string): IWorkerNode {
