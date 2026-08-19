@@ -1,3 +1,16 @@
+import fs from 'fs';
+import path from 'path';
+
+/** Single source of truth for the version: read it from package.json. */
+function readPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
 export interface AppConfig {
   env: string;
   port: number;
@@ -64,7 +77,7 @@ export const config: AppConfig = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 3000,
   serviceName: 'AI Research Platform (ARP)',
-  version: '0.1.0',
+  version: readPackageVersion(),
   ai: {
     // Any subset of the five providers can be configured. A provider is only
     // available when its API key is present; with none set, the AI features

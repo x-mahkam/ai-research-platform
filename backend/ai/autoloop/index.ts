@@ -180,6 +180,12 @@ export class AutonomousLoopService {
       updatedAt: now,
     };
     this.runs.set(run.id, run);
+    // Bound the store: evict the oldest runs so it can't grow without limit
+    // over the process lifetime.
+    if (this.runs.size > 100) {
+      const oldest = this.runs.keys().next().value;
+      if (oldest) this.runs.delete(oldest);
+    }
     // Fire and forget; the UI polls getStatus.
     void this.execute(run.id);
     return run;

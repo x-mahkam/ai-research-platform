@@ -192,8 +192,7 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     simulator?: string;
     providers?: string[];
   }): Promise<ExperimentSetupProposal> {
-    const provider = aiProviderRegistry.resolveSelection(input.providers)[0];
-    if (!provider) {
+    if (aiProviderRegistry.listConfigured().length === 0) {
       return this.fallbackSetupProposal(input.simulator, 'No AI provider is configured.');
     }
 
@@ -203,20 +202,21 @@ Target simulator: ${input.simulator || 'unspecified'}
 Design the experiment setup as JSON per your instructions.`;
 
     try {
-      const text = await provider.generate({
-        system: SYSTEM_PROMPT_SETUP,
-        prompt,
-        maxTokens: config.ai.maxTokens,
-      });
-      const parsed = this.parseSetupJson(text);
+      // Route through the fallback chain so a rate-limited / failing provider
+      // is transparently retried on another configured model.
+      const result = await aiRouter.generateWithFallback(
+        { system: SYSTEM_PROMPT_SETUP, prompt, maxTokens: config.ai.maxTokens },
+        { requested: input.providers, task: 'planning' }
+      );
+      const parsed = this.parseSetupJson(result.text);
       if (!parsed) {
-        logger.warn(`AI setup output from "${provider.id}" was not parseable JSON; using fallback.`);
+        logger.warn(`AI setup output from "${result.providerId}" was not parseable JSON; using fallback.`);
         return this.fallbackSetupProposal(input.simulator, 'The AI response was not valid setup JSON.');
       }
-      return { ...parsed, provider: provider.id, isAi: true };
+      return { ...parsed, provider: result.providerId, isAi: true };
     } catch (err: any) {
-      logger.error(`AI setup generation via "${provider.id}" failed`, { error: err.message });
-      return this.fallbackSetupProposal(input.simulator, `The ${provider.label} call failed: ${err.message}`);
+      logger.error('AI setup generation failed on all providers', { error: err.message });
+      return this.fallbackSetupProposal(input.simulator, `Every configured AI provider failed: ${err.message}`);
     }
   }
 

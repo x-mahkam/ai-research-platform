@@ -39,6 +39,8 @@ export class SimulationMonitor {
 
       const history = this.telemetryHistory.get(jobId) || [];
       history.push(snapshot);
+      // Bound per-job history (a snapshot every 2s would grow without limit).
+      if (history.length > 300) history.splice(0, history.length - 300);
       this.telemetryHistory.set(jobId, history);
 
       if (onUpdate) onUpdate(snapshot);
@@ -56,6 +58,8 @@ export class SimulationMonitor {
     if (timer) {
       clearInterval(timer);
       this.activeMonitors.delete(jobId);
+      // Release the accumulated snapshots for this finished job.
+      this.telemetryHistory.delete(jobId);
       logger.info(`Stopped telemetry monitoring for job ${jobId}`);
       simulationRepository.appendLog(jobId, `[${formatLogTimestamp()}] Telemetry monitoring probe detached.`);
     }
