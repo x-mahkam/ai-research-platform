@@ -17,6 +17,11 @@ function upsertEnvFile(filePath: string, entries: Record<string, string>): void 
   }
   const lines = content.length ? content.split(/\r?\n/) : [];
   for (const [key, value] of Object.entries(entries)) {
+    // Reject values that could break out of the KEY="value" line and inject
+    // additional .env entries (newlines) or terminate the quoted value (quote).
+    if (/[\r\n"]/.test(value)) {
+      throw new Error(`Refusing to write ${key}: value contains a newline or double-quote.`);
+    }
     const assignment = `${key}="${value}"`;
     const re = new RegExp(`^\\s*#?\\s*${key}\\s*=`);
     const idx = lines.findIndex((l) => re.test(l));

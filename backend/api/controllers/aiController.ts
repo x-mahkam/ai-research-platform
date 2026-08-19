@@ -110,8 +110,7 @@ export class AIController {
       const isLocal =
         remote === '127.0.0.1' ||
         remote === '::1' ||
-        remote === '::ffff:127.0.0.1' ||
-        req.hostname === 'localhost';
+        remote === '::ffff:127.0.0.1';
       if (!isLocal) {
         return res.status(403).json({ error: 'API keys can only be set from the local machine.' });
       }
@@ -220,8 +219,7 @@ export class AIController {
       const isLocal =
         remote === '127.0.0.1' ||
         remote === '::1' ||
-        remote === '::ffff:127.0.0.1' ||
-        req.hostname === 'localhost';
+        remote === '::ffff:127.0.0.1';
       if (!isLocal) {
         return res.status(403).json({ error: 'Ollama settings can only be changed from the local machine.' });
       }
@@ -239,8 +237,7 @@ export class AIController {
       const isLocal =
         remote === '127.0.0.1' ||
         remote === '::1' ||
-        remote === '::ffff:127.0.0.1' ||
-        req.hostname === 'localhost';
+        remote === '::ffff:127.0.0.1';
       if (!isLocal) {
         return res.status(403).json({ error: 'The COMSOL path can only be set from the local machine.' });
       }
