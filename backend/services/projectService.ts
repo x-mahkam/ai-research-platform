@@ -13,7 +13,7 @@ export class ProjectService {
     const simulator = proj.simulator || 'Synopsys Sentaurus TCAD';
     const physicsModule = proj.physicsModule || 'Hydrodynamic';
     const researchGoal = proj.researchGoal || proj.description || 'Scientific simulation & optimization';
-    const principalInvestigator = proj.principalInvestigator || proj.owner || 'Dr. Jasur Alimov';
+    const principalInvestigator = proj.principalInvestigator || proj.owner || 'Local User';
     const models = modelService.getProjectModels(proj.id);
     const defaultModel = models.find((m) => m.isDefault) || models[0];
 
@@ -61,7 +61,7 @@ export class ProjectService {
     const simulator = projectData.simulator || 'Synopsys Sentaurus TCAD';
     const physicsModule = projectData.physicsModule || 'Hydrodynamic';
     const researchGoal = projectData.researchGoal || projectData.description || 'Scientific investigation';
-    const principalInvestigator = projectData.principalInvestigator || projectData.owner || 'Dr. Jasur Alimov';
+    const principalInvestigator = projectData.principalInvestigator || projectData.owner || 'Local User';
 
     const newProject: Project = {
       id: generateId('proj'),

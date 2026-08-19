@@ -74,9 +74,11 @@ export const config: AppConfig = {
     providers: readAiProvidersFromEnv(),
   },
   simulation: {
-    defaultHostMachine: 'node-compute-02.arp.local',
-    defaultCpuUsage: 78.2,
-    defaultMemoryUsageGb: 8.5,
+    // Neutral defaults — no fabricated telemetry. The job manager stamps the
+    // real host and 0 (= not measured) for CPU/RAM.
+    defaultHostMachine: 'local',
+    defaultCpuUsage: 0,
+    defaultMemoryUsageGb: 0,
   },
 };
 

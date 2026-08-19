@@ -66,7 +66,7 @@ export const ReportGeneratorView: React.FC<ReportGeneratorViewProps> = ({
           className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-md transition cursor-pointer shrink-0 disabled:opacity-50"
         >
           <Sparkles className="w-4 h-4" />
-          <span>{isGenerating ? 'Generating with Claude...' : 'Generate AI Report'}</span>
+          <span>{isGenerating ? 'Generating report...' : 'Generate AI Report'}</span>
         </button>
       </div>
 

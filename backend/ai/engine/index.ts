@@ -1,7 +1,8 @@
 import { config } from '../../configuration/index.js';
 import { LoggerService } from '../../logging/logger.js';
-import { SYSTEM_PROMPT_CORE, SYSTEM_PROMPT_SETUP } from '../prompts/index.js';
+import { SYSTEM_PROMPT_CORE, SYSTEM_PROMPT_SETUP, SYSTEM_PROMPT_REPORTER } from '../prompts/index.js';
 import { agentManager } from '../agents/index.js';
+import { researchReporter } from '../reporter/index.js';
 import { aiMemoryStore } from '../memory/index.js';
 import { aiContextAggregator } from '../context/index.js';
 import { aiProviderRegistry } from '../providers/index.js';
@@ -134,10 +135,49 @@ Provide a rigorous, formatted Markdown response explaining the physics, recommen
     };
   }
 
-  public async generateScientificReport(input: { experiment: any; projectName?: string }): Promise<GeneratedReport> {
+  public async generateScientificReport(input: {
+    experiment: any;
+    projectName?: string;
+    providers?: string[];
+  }): Promise<GeneratedReport> {
     logger.info(`AI Engine generating scientific report for experiment ${input.experiment?.id}`);
-    const repRes = await agentManager.runReporterAgent(input);
-    return repRes.report;
+
+    // Write the report with a real AI provider when one is available, seeded
+    // with the experiment's actual data. Only if every provider fails / none is
+    // configured do we fall back to an honest data-only report (no fabrication).
+    const exp = input.experiment || {};
+    const factSheet = JSON.stringify(
+      {
+        title: exp.title,
+        simulator: exp.simulator,
+        parameters: exp.parameters,
+        metrics: exp.results?.metrics,
+        diagnostics: exp.results?.diagnostics,
+      },
+      null,
+      2
+    );
+    const prompt = `Write a rigorous, publication-style scientific report for this experiment using ONLY the data below. Do not invent numbers, physical models, or results that are not present. If results are missing, say so.\n\n${factSheet}`;
+
+    try {
+      const result = await aiRouter.generateWithFallback(
+        { system: SYSTEM_PROMPT_REPORTER, prompt, maxTokens: config.ai.maxTokens },
+        { requested: input.providers || exp.aiProviders, task: 'report' }
+      );
+      if (result.text.trim()) {
+        return researchReporter.generateReport({
+          experiment: exp,
+          projectName: input.projectName,
+          aiMarkdown: result.text,
+          aiProvider: result.providerId,
+        });
+      }
+    } catch (err) {
+      logger.warn(`Report AI generation failed, using data-only report: ${(err as Error).message}`);
+    }
+
+    // Honest fallback: real data only, no invented content.
+    return researchReporter.generateReport({ experiment: exp, projectName: input.projectName });
   }
 
   /**

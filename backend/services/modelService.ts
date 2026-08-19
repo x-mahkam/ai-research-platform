@@ -253,7 +253,7 @@ export class ModelService {
     const version = data.version || detected.version;
     const fileSize = data.fileSize || validation.meta.fileSize;
     const checksum = data.checksum || validation.meta.checksum;
-    const owner = data.owner || 'Dr. Jasur Alimov';
+    const owner = data.owner || 'Local User';
     const absolutePath = data.absolutePath || `/workspaces/projects/${projectId}/models/${fileName}`;
 
     if (shouldBeDefault) {

@@ -83,7 +83,7 @@ export class ExperimentService {
       researchGoal: expData.researchGoal || selectedModel.description || 'Scientific simulation sweep',
       workspacePath,
       parameters,
-      createdBy: expData.createdBy || 'Dr. Jasur Alimov',
+      createdBy: expData.createdBy || 'Local User',
       id: expId,
       projectId,
       modelId,

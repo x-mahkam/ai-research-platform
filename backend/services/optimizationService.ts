@@ -16,7 +16,9 @@ export class OptimizationService {
       ...data,
       experimentId: data.experimentId || 'exp-001',
       title: data.title || 'Parameter Sweep Optimization',
-      algorithm: data.algorithm || 'Bayesian Optimization',
+      // Honest label: this is a linear grid sweep, not a Bayesian/genetic
+      // solver. Do not claim an algorithm the code does not implement.
+      algorithm: data.algorithm || 'Grid Search',
       targetMetric: data.targetMetric || 'Ion/Ioff Ratio',
       objective: data.objective || 'maximize',
       maxIterations: data.maxIterations || 50,
@@ -72,11 +74,19 @@ export class OptimizationService {
       }
     }
 
+    // Honest: only mark a point "best so far" when its REAL objective actually
+    // improves on the running best. Never fabricate a Pareto flag, and never
+    // carry the previous best forward as this point's objective.
+    const isBestSoFar =
+      realObjectiveValue !== null &&
+      (job.bestValue === null ||
+        (job.objective === 'maximize' ? realObjectiveValue > job.bestValue : realObjectiveValue < job.bestValue));
+
     const newIteration = {
       iteration: nextIter,
       parameters: nextParams,
-      objectiveValue: realObjectiveValue !== null ? realObjectiveValue : (job.bestValue || 0),
-      isParetoOptimal: true,
+      objectiveValue: realObjectiveValue, // null when no real metric was evaluated
+      isParetoOptimal: isBestSoFar,
     };
 
     const updatedHistory = [...job.history, newIteration];

@@ -5,73 +5,103 @@ export interface IReportInputData {
   experiment: any;
   projectName?: string;
   analysisReport?: any;
+  /** Report body written by a real AI provider, if one was available. */
+  aiMarkdown?: string;
+  /** Which provider authored aiMarkdown (for honest attribution). */
+  aiProvider?: string;
 }
 
+/**
+ * Builds a scientific report from an experiment. When a real AI provider wrote
+ * the body (aiMarkdown) we use it and attribute it honestly. Otherwise we emit
+ * a data-only report containing ONLY what the run actually produced — real
+ * metrics, real solver diagnostics, real parameters — and never fabricated
+ * physics claims or numeric recommendations.
+ */
 export class ResearchReporter {
   public generateReport(input: IReportInputData): GeneratedReport {
-    const { experiment, projectName, analysisReport } = input;
-    const expTitle = experiment?.title || 'Advanced Simulation Experiment';
+    const { experiment, projectName, analysisReport, aiMarkdown, aiProvider } = input;
+    const expTitle = experiment?.title || 'Simulation Experiment';
     const projName = projectName || 'AI Research Platform';
+    const author = aiProvider ? `AI (${aiProvider})` : 'ARP (no AI provider configured)';
 
-    const metrics: Record<string, unknown> | null =
-      experiment?.results?.metrics || analysisReport?.figuresOfMerit || null;
-
-    const metricsSection = metrics
-      ? `| Parameter / Metric | Extracted Value | Unit / Target | Status |
-| :--- | :--- | :--- | :--- |
-${Object.entries(metrics)
-  .map(([k, v]) => `| **${k}** | \`${v}\` | Standard | Extracted from simulator output |`)
-  .join('\n')}`
-      : `> **No simulation results are available for this experiment yet.**
-> Figures of merit will appear here after a real simulator run completes and its output is parsed.
-> This platform never substitutes synthetic values for missing simulation data.`;
-
-    const markdownContent = `# Comprehensive Scientific Research Report
-**Experiment:** ${expTitle}  
-**Project:** ${projName}  
-**Author:** AI Scientist (ARP Engine)  
-**Timestamp:** ${getCurrentTimestamp()}  
-
----
-
-## 1. Executive Summary
-This report presents numerical modeling and physical characterization performed under the AI Research Platform.
-All simulation tasks were executed autonomously by the **Simulation Engine** using verified physical transport models.
-
----
-
-## 2. Key Figures of Merit
-${metricsSection}
-
----
-
-## 3. Physical Models & Transport Formulation
-1. **Drift-Diffusion & Hydrodynamic Models:** Solves coupled Poisson and carrier continuity equations with high-field velocity overshoot.
-2. **Quantum Confinement Correction:** Incorporates density gradient quantum potential corrections for ultra-scaled channel geometries.
-3. **Band-to-Band Tunneling (BTBT):** Accounts for drain-side junction leakage under off-state bias.
-
----
-
-## 4. AI Research Recommendations
-- **Workfunction Tuning:** Adjust metal gate workfunction to ~4.65 eV to optimize Vth symmetry.
-- **Mesh Grid Optimization:** Use finer adaptive mesh grid spacing (< 0.2 nm) near oxide interfaces to eliminate non-convergence artifacts.
-- **Thermal Dissipation:** Introduce high-k oxide dielectric heat sinks to reduce peak junction temperature by ~12 K.
-
----
-*Generated automatically by ARP AI Engine Reporter Agent.*
-`;
+    const markdownContent = aiMarkdown?.trim()
+      ? this.wrapAiReport(aiMarkdown.trim(), expTitle, projName, aiProvider)
+      : this.dataOnlyReport(experiment, expTitle, projName, analysisReport);
 
     return {
       id: generateId('rep'),
-      experimentId: experiment?.id || 'exp-001',
+      experimentId: experiment?.id || 'exp-unknown',
       experimentTitle: expTitle,
       projectName: projName,
       title: `${expTitle} - Scientific Research Report`,
-      author: 'AI Scientist (ARP Engine)',
+      author,
       createdAt: getCurrentTimestamp(),
       version: '1.0',
       markdownContent,
     };
+  }
+
+  private header(expTitle: string, projName: string, author: string): string {
+    return `# Scientific Research Report
+**Experiment:** ${expTitle}
+**Project:** ${projName}
+**Author:** ${author}
+**Timestamp:** ${getCurrentTimestamp()}
+
+---
+`;
+  }
+
+  private wrapAiReport(ai: string, expTitle: string, projName: string, provider?: string): string {
+    return `${this.header(expTitle, projName, `AI (${provider || 'unknown'})`)}
+${ai}
+`;
+  }
+
+  /** Honest, data-only report — no invented models, numbers, or recommendations. */
+  private dataOnlyReport(experiment: any, expTitle: string, projName: string, analysisReport: any): string {
+    const metrics: Record<string, unknown> | null =
+      experiment?.results?.metrics || analysisReport?.figuresOfMerit || null;
+
+    const metricsSection = metrics && Object.keys(metrics).length
+      ? `| Metric | Value |
+| :--- | :--- |
+${Object.entries(metrics)
+  .map(([k, v]) => `| **${k}** | \`${v}\` |`)
+  .join('\n')}`
+      : `> No simulation results are available for this experiment yet. Figures of merit will appear here after a real simulator run completes and its output is parsed. This platform never substitutes synthetic values for missing simulation data.`;
+
+    const diag = experiment?.results?.diagnostics as Record<string, unknown> | undefined;
+    const diagSection = diag
+      ? `\n## Solver Diagnostics\n${[
+          typeof diag.converged === 'boolean' ? `- Converged: ${diag.converged}` : '',
+          Array.isArray(diag.warnings) && diag.warnings.length
+            ? `- Warnings: ${(diag.warnings as string[]).slice(0, 10).join('; ')}`
+            : '',
+          Array.isArray(diag.errors) && diag.errors.length
+            ? `- Errors: ${(diag.errors as string[]).slice(0, 10).join('; ')}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n')}\n`
+      : '';
+
+    const params = Array.isArray(experiment?.parameters) && experiment.parameters.length
+      ? `\n## Parameters\n| Name | Value | Unit |\n| :--- | :--- | :--- |\n${experiment.parameters
+          .map((p: any) => `| ${p.name || p.key} | \`${p.value}\` | ${p.unit || ''} |`)
+          .join('\n')}\n`
+      : '';
+
+    return `${this.header(expTitle, projName, 'ARP (no AI provider configured)')}
+> No AI provider is configured, so this is a data-only report generated directly from the run. Configure a provider (or enable local Ollama) for a written scientific analysis.
+
+## Key Figures of Merit
+${metricsSection}
+${diagSection}${params}
+---
+*Data-only report. No values here are synthesized — only what the simulator produced is shown.*
+`;
   }
 }
 

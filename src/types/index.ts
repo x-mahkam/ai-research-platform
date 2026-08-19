@@ -257,7 +257,8 @@ export type OptimizationAlgorithm = 'Bayesian Optimization' | 'Genetic Algorithm
 export interface OptimizationIteration {
   iteration: number;
   parameters: Record<string, number>;
-  objectiveValue: number;
+  /** null when no real objective metric was evaluated for this point. */
+  objectiveValue: number | null;
   isParetoOptimal?: boolean;
 }
 

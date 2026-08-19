@@ -1,3 +1,4 @@
+import os from 'os';
 import { SimulationJob } from '../../shared/types.js';
 import { ISimulationJobRequest } from '../types.js';
 import { simulationRepository } from '../../repositories/simulationRepository.js';
@@ -44,9 +45,12 @@ export class SimulationJobManager {
       status: 'Queued',
       progress: 0,
       startTime: getCurrentTimestamp(),
-      cpuUsage: config.simulation.defaultCpuUsage,
-      memoryUsage: config.simulation.defaultMemoryUsageGb,
-      hostMachine: config.simulation.defaultHostMachine,
+      // 0 = not measured. We do not fabricate per-job CPU/RAM telemetry; the UI
+      // shows "not measured" rather than a constant fake gauge. Host is the real
+      // machine running the platform.
+      cpuUsage: 0,
+      memoryUsage: 0,
+      hostMachine: os.hostname() || 'local',
       logs: [
         `[${formatLogTimestamp()}] Job created for experiment "${experiment.title}"`,
         `[${formatLogTimestamp()}] Initializing generic simulation pipeline context...`,
