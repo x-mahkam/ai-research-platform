@@ -64,8 +64,12 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(config.port, '0.0.0.0', () => {
-    logger.info(`[${config.serviceName} v${config.version}] Backend running on http://0.0.0.0:${config.port}`);
+  // Bind to loopback by default so the local desktop app is not exposed to the
+  // whole network (there is no auth layer). A public deployment (e.g. Render)
+  // must opt in explicitly via HOST=0.0.0.0.
+  const host = process.env.HOST || '127.0.0.1';
+  const server = app.listen(config.port, host, () => {
+    logger.info(`[${config.serviceName} v${config.version}] Backend running on http://${host}:${config.port}`);
   });
 
   server.on('error', (err: NodeJS.ErrnoException) => {

@@ -11,6 +11,12 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # The server binds to loopback by default (the desktop app is single-user
+      # with no auth). A hosted deploy must bind publicly to receive traffic.
+      # NOTE: this deployment has no authentication — anyone with the URL has
+      # full control. Do not expose sensitive work here until an auth layer is added.
+      - key: HOST
+        value: 0.0.0.0
       # AI providers — set at least one in the dashboard (Environment tab).
       - key: GEMINI_API_KEY
         sync: false
