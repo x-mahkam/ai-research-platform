@@ -135,15 +135,34 @@ export class SimulationEngineOrchestrator {
       simulationLifecycleManager.transitionTo(dequeuedJobId, 'COLLECTING', 'Gathering metrics and curve vectors');
       simulationStatusTracker.updateJobProgress(dequeuedJobId, 85);
 
+      // A run that produced no real solver output (no simulator installed /
+      // configured) must NOT be reported as a successful Completed experiment.
+      const awaitingSolver =
+        (executionResult.results as { status?: string } | undefined)?.status === 'AWAITING_REAL_SIMULATOR';
+      if (awaitingSolver) {
+        const msg =
+          'No real simulator ran for this experiment. Install/configure the solver (e.g. set the COMSOL path in Settings) and select the matching plugin, then run again.';
+        logger.warn(`Job ${dequeuedJobId}: ${msg}`);
+        simulationRepository.appendLog(dequeuedJobId, `[${formatLogTimestamp()}] ${msg}`);
+        simulationRepository.update(dequeuedJobId, { status: 'Failed', progress: 100, endTime: getCurrentTimestamp(), error: msg });
+        experimentRepository.update(experimentId, { status: 'Failed' });
+        simulationLifecycleManager.transitionTo(dequeuedJobId, 'FAILED', 'No real simulator available');
+        workspaceManager.setWorkspaceStatus(experimentId, dequeuedJobId, 'READY');
+        return;
+      }
+
       if (executionResult.results) {
-        // Convert raw results to Unified ARP Format via ResultManager
+        // Convert raw results to Unified ARP Format. Use the RESOLVED plugin id
+        // (the real solver that produced the output), not the experiment's
+        // placeholder pluginId — otherwise the plugin-specific parser is skipped
+        // and metrics/curves are lost.
         const unifiedResults = await resultManager.processAndStoreRawResult(
-          job?.pluginId || 'plugin-generic',
+          resolvedPluginId,
           executionResult.results,
           {
             experimentId,
             jobId: dequeuedJobId,
-            pluginId: job?.pluginId || 'plugin-generic',
+            pluginId: resolvedPluginId,
           },
           'JSON'
         );

@@ -50,6 +50,35 @@ export class DIContainer {
 
     // Run schema migrations on container initialization
     await this.migrationManager.runPendingMigrations();
+
+    // Reconcile runs interrupted by a previous shutdown. Execution is driven by
+    // an in-memory async pipeline, so any job/experiment persisted as non-
+    // terminal (Running/Queued/Paused) after a restart is orphaned — its driver
+    // is gone. Mark them Failed so the UI doesn't show a perpetual "Running".
+    this.reconcileInterruptedRuns();
+  }
+
+  private reconcileInterruptedRuns(): void {
+    const NON_TERMINAL = new Set(['Running', 'Queued', 'Paused', 'Executing']);
+    const reason = 'Interrupted by a server restart before completion.';
+    let jobsFixed = 0;
+    for (const job of this.simulationRepository.findAll()) {
+      if (NON_TERMINAL.has(job.status as string)) {
+        this.simulationRepository.update(job.id, { status: 'Failed', error: job.error || reason });
+        jobsFixed++;
+      }
+    }
+    let expsFixed = 0;
+    for (const exp of this.experimentRepository.findAll()) {
+      if (NON_TERMINAL.has(exp.status as string)) {
+        this.experimentRepository.update(exp.id, { status: 'Failed' });
+        expsFixed++;
+      }
+    }
+    if (jobsFixed || expsFixed) {
+      // eslint-disable-next-line no-console
+      console.warn(`[startup] Reconciled ${jobsFixed} interrupted job(s) and ${expsFixed} experiment(s) to Failed.`);
+    }
   }
 }
 

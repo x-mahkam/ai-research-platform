@@ -55,14 +55,20 @@ describe('simulation run (integration)', () => {
       .send({ experimentId });
     expect(runRes.status).toBe(201);
 
-    // The job should reach a terminal state (not stay stuck on "Running").
+    // The job must reach a TERMINAL state (not stay stuck on "Running"). In CI
+    // no real solver is installed, so the honest outcome is "Failed" (no real
+    // simulator ran) rather than a fake "Completed".
+    const isTerminal = (s: string) => s === 'Completed' || s === 'Failed';
     const jobs = await pollUntil(
       async () => (await request(app).get('/api/simulations')).body as any[],
-      (list) => list.some((j) => j.experimentId === experimentId && j.status === 'Completed')
+      (list) => list.some((j) => j.experimentId === experimentId && isTerminal(j.status))
     );
     const job = jobs.find((j) => j.experimentId === experimentId);
-    expect(job?.status).toBe('Completed');
+    expect(isTerminal(job?.status)).toBe(true);
     expect(job?.progress).toBe(100);
+    // No solver in CI → Failed with an explanatory error, never a fake success.
+    expect(job?.status).toBe('Failed');
+    expect(String(job?.error || '')).toMatch(/no real simulator/i);
 
     // Exactly one job was created for this run — no recursion / runaway.
     const jobsForExp = jobs.filter((j) => j.experimentId === experimentId);
