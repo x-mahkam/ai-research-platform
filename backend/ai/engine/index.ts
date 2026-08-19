@@ -10,10 +10,10 @@ import { AIProvider } from '../providers/types.js';
 import { aiRouter, taskFromPrompt } from '../router/index.js';
 import { GeneratedReport, ExperimentSetupProposal, ProposedParameter } from '../../shared/types.js';
 
-export * from './AIResearchEngine.js';
-export * from './GoalEvaluator.js';
+// ParameterGenerator is still used by the optimizer; the rest of the old
+// "research engine" chain (AIResearchEngine/GoalEvaluator/ExperimentComparator)
+// and the unwired workflow/ subsystem were removed as dead code.
 export * from './ParameterGenerator.js';
-export * from './ExperimentComparator.js';
 
 const logger = new LoggerService('AIEngineOrchestrator');
 
